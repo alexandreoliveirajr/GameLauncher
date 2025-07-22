@@ -1,0 +1,20 @@
+# Ignorar arquivos de dados gerados pelo aplicativo
+games_data.json
+profile.json
+settings.json
+steam_app_list.json
+
+# Ignorar pastas e arquivos gerados pelo PyInstaller
+__pycache__/
+*.pyc
+venv/
+.venv/
+build/
+dist/
+steam_artwork/
+*.spec
+
+# Ignorar atalhos de sistema e outros arquivos de usuário
+*.lnk # Atalhos do Windows
+*.bak # Arquivos de backup
+*.log # Arquivos de log
