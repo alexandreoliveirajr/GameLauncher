@@ -1,4 +1,4 @@
-# game_launcher/core/game_manager.py
+# core/game_manager.py
 
 import json
 import os
@@ -35,9 +35,11 @@ class GameManager:
                         if "id" not in game or not game["id"]:
                             game["id"] = self._generate_id()
                             needs_saving = True
+                        
+                        game.setdefault("tags", [])
 
                     if needs_saving:
-                        print("Salvando novas IDs geradas para jogos antigos...")
+                        print("Salvando novas IDs ou campos para jogos antigos...")
                         self._save_games_data(games_data)
 
                     return games_data
@@ -63,16 +65,12 @@ class GameManager:
     def _save_games(self):
         self._save_games_data(self.games)
 
-    def add_game(self, name, paths, image_path=None, background_path=None):
+    def add_game(self, name, paths, image_path=None, background_path=None, tags=None):
         new_game = {
-            "id": self._generate_id(),
-            "name": name,
-            "paths": paths,
-            "image": image_path,
-            "background": background_path,
-            "favorite": False,
-            "recent_play_time": None,
-            "total_playtime": 0
+            "id": self._generate_id(), "name": name, "paths": paths, 
+            "image": image_path, "background": background_path, 
+            "favorite": False, "recent_play_time": None, "total_playtime": 0,
+            "tags": tags if tags is not None else []
         }
         self.games.append(new_game)
         self._save_games()
@@ -81,12 +79,11 @@ class GameManager:
     def update_game(self, old_game_data, new_game_data):
         try:
             index = next(i for i, game in enumerate(self.games) if game["id"] == old_game_data["id"])
-            
             self.games[index]["name"] = new_game_data.get("name", self.games[index]["name"])
             self.games[index]["paths"] = new_game_data.get("paths", self.games[index]["paths"])
             self.games[index]["image"] = new_game_data.get("image", self.games[index]["image"])
             self.games[index]["background"] = new_game_data.get("background", self.games[index]["background"])
-            
+            self.games[index]["tags"] = new_game_data.get("tags", self.games[index].get("tags", []))
             self._save_games()
             return True
         except StopIteration:
@@ -101,10 +98,8 @@ class GameManager:
             return True
         return False
 
-    # --- MÉTODO MODIFICADO ---
     def get_all_games(self):
-        # Retorna a lista de jogos ordenada pelo nome (case-insensitive)
-        return sorted(self.games, key=lambda game: game['name'].lower())
+        return self.games # A ordenação será feita no get_filtered_games
 
     def get_game_by_id(self, game_id):
         return next((game for game in self.games if game["id"] == game_id), None)
@@ -116,11 +111,8 @@ class GameManager:
         game["favorite"] = not game.get("favorite", False)
         self._save_games()
 
-    # --- MÉTODO MODIFICADO ---
     def get_favorite_games(self):
-        # Filtra os jogos favoritos
         favorite_games = [game for game in self.games if game.get("favorite", False)]
-        # Retorna a lista de favoritos ordenada pelo nome
         return sorted(favorite_games, key=lambda game: game['name'].lower())
 
     def record_recent_play(self, game):
@@ -132,7 +124,6 @@ class GameManager:
         print(f"Adicionado {seconds_played}s para {game_to_update['name']}. Total: {game_to_update['total_playtime']}s")
         self._save_games()
 
-    # Este método continua ordenado por data, como deve ser.
     def get_recent_games(self):
         for g in self.games:
             if isinstance(g.get("recent_play_time"), str):
@@ -144,18 +135,36 @@ class GameManager:
             reverse=True
         )
 
-    # --- MÉTODO MODIFICADO ---
-    def get_filtered_games(self, search_text):
-        if not search_text:
-            # Se a busca estiver vazia, retorna todos os jogos já ordenados
-            return self.get_all_games()
+    def get_filtered_games(self, search_text, tag=None, sort_by="Nome (A-Z)"):
+        games_to_filter = list(self.games)
+
+        if search_text:
+            search_text_lower = search_text.lower()
+            games_to_filter = [
+                game for game in games_to_filter 
+                if search_text_lower in game["name"].lower() 
+                or any(search_text_lower in d["display_name"].lower() for d in game.get("paths", []))
+            ]
         
-        search_text_lower = search_text.lower()
-        # Filtra os jogos
-        filtered_games = [
-            game for game in self.games 
-            if search_text_lower in game["name"].lower() 
-            or any(search_text_lower in d["display_name"].lower() for d in game.get("paths", []))
-        ]
-        # Retorna a lista filtrada também ordenada pelo nome
-        return sorted(filtered_games, key=lambda game: game['name'].lower())
+        if tag and tag != "Todas":
+            games_to_filter = [game for game in games_to_filter if tag in game.get("tags", [])]
+            
+        if sort_by == "Nome (A-Z)":
+            games_to_filter.sort(key=lambda g: g['name'].lower())
+        elif sort_by == "Mais Jogado":
+            games_to_filter.sort(key=lambda g: g.get('total_playtime', 0), reverse=True)
+        elif sort_by == "Jogado Recentemente":
+            for g in games_to_filter:
+                if isinstance(g.get("recent_play_time"), str):
+                    try: g["recent_play_time"] = datetime.fromisoformat(g["recent_play_time"])
+                    except: g["recent_play_time"] = None
+            games_to_filter.sort(key=lambda g: g.get('recent_play_time') or datetime.min, reverse=True)
+            
+        return games_to_filter
+        
+    def get_all_unique_tags(self):
+        all_tags = set()
+        for game in self.games:
+            for tag in game.get("tags", []):
+                all_tags.add(tag)
+        return sorted(list(all_tags))

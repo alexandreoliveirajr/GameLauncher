@@ -29,7 +29,7 @@ class MainWindow(QMainWindow):
         self.app = QApplication.instance()
         self.setWindowTitle("Launcher de Jogos")
         
-        # --- FOLHA DE ESTILOS COMPLETA E CORRIGIDA ---
+        # --- FOLHA DE ESTILOS ---
         self.setStyleSheet("""
             QMainWindow {
                 background-color: #1e1e1e;
@@ -84,7 +84,7 @@ class MainWindow(QMainWindow):
                 alignment: left;
                 border-bottom: 1px solid #444;
             }
-            /* ESTILO ADICIONADO PARA A BARRA DE ROLAGEM */
+
             QScrollBar:vertical {
                 border: none;
                 background: #1e1e1e;
@@ -114,6 +114,26 @@ class MainWindow(QMainWindow):
             QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
                 background: none;
             }
+
+                        QMenu {
+                background-color: #2a2d30;
+                color: white;
+                border: 1px solid #444;
+                padding: 5px;
+            }
+            QMenu::item {
+                padding: 8px 25px 8px 20px;
+                border-radius: 5px;
+            }
+            QMenu::item:selected {
+                background-color: #4a90e2;
+            }
+            QMenu::separator {
+                height: 1px;
+                background: #444;
+                margin: 5px 0px;
+            }
+
         """)
 
         screen = QApplication.primaryScreen()
@@ -209,11 +229,46 @@ class MainWindow(QMainWindow):
     def _filter_library(self, text):
         filtered_games = self.game_manager.get_filtered_games(text)
         self.library_tab_widget.populate_games(filtered_games)
+        self.refresh_views()
 
     def refresh_views(self):
         print("Atualizando todas as abas...")
-        self.library_tab_widget.populate_games(self.game_manager.get_filtered_games(self.search_input.text()))
-        self.favorites_tab_widget.populate_favorites(self.game_manager.get_favorite_games())
+        search_term = self.search_input.text()
+
+        # --- Lógica da BIBLIOTECA (permanece a mesma) ---
+        lib_tag = self.library_tab_widget.current_tag
+        lib_sort = self.library_tab_widget.current_sort
+        filtered_and_sorted_games = self.game_manager.get_filtered_games(
+            search_term, tag=lib_tag, sort_by=lib_sort
+        )
+        self.library_tab_widget.populate_games(filtered_and_sorted_games)
+
+        # --- LÓGICA ATUALIZADA PARA FAVORITOS ---
+        fav_sort = self.favorites_tab_widget.current_sort
+        favorite_games = self.game_manager.get_favorite_games()
+
+        # Aplica busca aos favoritos
+        if search_term:
+            search_lower = search_term.lower()
+            favorite_games = [g for g in favorite_games if search_lower in g['name'].lower()]
+        
+        # Aplica ordenação aos favoritos
+        if fav_sort == "Mais Jogado":
+            favorite_games.sort(key=lambda g: g.get('total_playtime', 0), reverse=True)
+        elif fav_sort == "Jogado Recentemente":
+            for g in favorite_games:
+                if isinstance(g.get("recent_play_time"), str):
+                    try: g["recent_play_time"] = datetime.fromisoformat(g["recent_play_time"])
+                    except: g["recent_play_time"] = None
+            favorite_games.sort(key=lambda g: g.get('recent_play_time') or datetime.min, reverse=True)
+        # "Nome (A-Z)" já é o padrão do get_favorite_games, mas podemos garantir
+        else: 
+             favorite_games.sort(key=lambda g: g['name'].lower())
+        
+        # O método populate_favorites agora sabe qual view (grade/lista) usar
+        self.favorites_tab_widget.populate_favorites(favorite_games)
+        
+        # --- Resto da atualização (permanece o mesmo) ---
         self.recent_tab_widget.populate_recent_games(self.game_manager.get_recent_games())
         self.profile_tab_widget.load_profile_data()
 

@@ -11,8 +11,6 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtGui import QPixmap, QPainter, QBrush, QColor
 from PyQt5.QtCore import Qt, QPoint
 
-from core import steam_api
-
 class GameDetailsDialog(QDialog):
     def __init__(self, game, game_manager, game_launcher, main_window_ref, parent=None):
         super().__init__(parent)
@@ -53,7 +51,6 @@ class GameDetailsDialog(QDialog):
         self.main_layout = QVBoxLayout(self)
         self.main_layout.setContentsMargins(0,0,0,0)
         
-        # MODIFICADO: Aumentando a transparência (de 0.75 para 0.65)
         overlay_panel = QWidget()
         overlay_panel.setStyleSheet("background-color: rgba(20, 20, 22, 0.65);")
         self.main_layout.addWidget(overlay_panel)
@@ -62,7 +59,6 @@ class GameDetailsDialog(QDialog):
         panel_layout.setContentsMargins(30, 30, 30, 30)
         panel_layout.setSpacing(30)
 
-        # --- Coluna da Esquerda (Capa do Jogo) ---
         cover_label = QLabel()
         cover_label.setFixedSize(250, 375)
         cover_label.setStyleSheet("border-radius: 10px;")
@@ -76,7 +72,6 @@ class GameDetailsDialog(QDialog):
             cover_label.setText("Sem Capa")
             cover_label.setAlignment(Qt.AlignCenter)
         
-        # --- Coluna da Direita (Informações e Ações) ---
         right_column_layout = QVBoxLayout()
         panel_layout.addLayout(right_column_layout, 1)
 
@@ -91,9 +86,30 @@ class GameDetailsDialog(QDialog):
         total_seconds = self.game.get("total_playtime", 0)
         playtime_str = self._format_playtime(total_seconds)
         playtime_label = QLabel(f"🕒 {playtime_str}")
-        playtime_label.setStyleSheet("font-size: 18px; font-weight: bold; color: #ccc; margin-top: 10px;")
+        playtime_label.setStyleSheet("font-size: 18px; font-weight: bold; color: #ccc; margin-top: 10px; margin-bottom: 10px;")
         playtime_label.setAlignment(Qt.AlignCenter)
         right_column_layout.addWidget(playtime_label)
+
+        # --- ADICIONADO: Layout para as Tags ---
+        tags_layout = QHBoxLayout()
+        tags_layout.setAlignment(Qt.AlignCenter)
+        tags = self.game.get("tags", [])
+        if tags:
+            for tag_text in tags:
+                tag_label = QLabel(tag_text)
+                tag_label.setStyleSheet("""
+                    QLabel {
+                        background-color: #4a90e2;
+                        color: white;
+                        padding: 4px 8px;
+                        border-radius: 8px;
+                        font-size: 12px;
+                        font-weight: bold;
+                    }
+                """)
+                tags_layout.addWidget(tag_label)
+        right_column_layout.addLayout(tags_layout)
+        # --- FIM DA SEÇÃO DE TAGS ---
 
         right_column_layout.addStretch(1)
 
@@ -141,162 +157,86 @@ class GameDetailsDialog(QDialog):
         if bg_path and os.path.exists(bg_path):
             self.background_pixmap = QPixmap(bg_path)
             
+    # O resto do arquivo (format_playtime, launch_game, edit_game_dialog, etc) continua igual
     def _format_playtime(self, total_seconds):
         if total_seconds <= 0: return "Nenhum tempo registrado"
-        hours = total_seconds // 3600
-        minutes = (total_seconds % 3600) // 60
+        hours = total_seconds // 3600; minutes = (total_seconds % 3600) // 60
         if hours > 0 and minutes > 0: return f"{hours}h e {minutes}min"
         elif hours > 0: return f"{hours}h"
         elif minutes > 0: return f"{minutes}min"
         else: return "Menos de 1 minuto"
-
     def _launch_selected_game(self):
         selected_path = self.exec_combo.currentData()
         self._launch_game(selected_path)
-
     def _launch_game(self, path):
         result, data = self.game_launcher.launch_game(self.game, path)
         if result == "running": self.main_window_ref.show_message_box("Jogo em execução", f"O jogo '{os.path.basename(path)}' já está em execução.", "info")
         elif result == "error": self.main_window_ref.show_message_box("Erro ao abrir", f"Não foi possível abrir o jogo:\n{data}", "warning")
         else:
             process, game = result, data
-            self.main_window_ref.start_tracking_game(process, game)
-            self.main_window_ref.refresh_views()
-            self.accept()
-
+            self.main_window_ref.start_tracking_game(process, game); self.main_window_ref.refresh_views(); self.accept()
     def _toggle_favorite(self):
-        self.game_manager.toggle_favorite(self.game)
-        self.main_window_ref.refresh_views()
-        self.accept()
-        
+        self.game_manager.toggle_favorite(self.game); self.main_window_ref.refresh_views(); self.accept()
     def _edit_game_dialog(self):
-        edit_dialog = QDialog(self)
-        edit_dialog.setWindowTitle(f"Editar {self.current_edited_game['name']}")
-        edit_dialog.setStyleSheet("background-color: #1e1e1e; color: white;")
-        edit_layout = QFormLayout()
-
-        name_input = QLineEdit(self.current_edited_game["name"])
-        edit_layout.addRow("Nome:", name_input)
-
-        fetch_art_btn = QPushButton("🔎 Buscar Arte na Steam por Nome")
-        fetch_art_btn.setStyleSheet("background-color: #1b2838; color: white; padding: 8px;")
-        # Passamos os widgets que precisam ser atualizados para a função
-        fetch_art_btn.clicked.connect(
-            lambda: self._fetch_steam_artwork(
-                name_input.text(), 
-                self.img_btn_ref,  # Precisamos de uma referência para os botões
-                self.bg_btn_ref
-            )
-        )
-        edit_layout.addRow(fetch_art_btn)
-
-        paths_group_box = QGroupBox("Executáveis"); 
-        paths_group_box.setStyleSheet("color: white;"); self.paths_edit_layout = QVBoxLayout(); paths_group_box.setLayout(self.paths_edit_layout); edit_layout.addRow(paths_group_box); self._refresh_edit_paths_labels()
+        edit_dialog = QDialog(self); edit_dialog.setWindowTitle(f"Editar {self.current_edited_game['name']}"); edit_dialog.setStyleSheet("background-color: #1e1e1e; color: white;"); edit_layout = QFormLayout()
+        name_input = QLineEdit(self.current_edited_game["name"]); edit_layout.addRow("Nome:", name_input)
+        tags_text = ", ".join(self.current_edited_game.get("tags", [])); self.tags_input = QLineEdit(tags_text); self.tags_input.setPlaceholderText("RPG, Indie, Ação... (separadas por vírgula)"); edit_layout.addRow("Tags:", self.tags_input)
+        paths_group_box = QGroupBox("Executáveis"); paths_group_box.setStyleSheet("color: white;"); self.paths_edit_layout = QVBoxLayout(); paths_group_box.setLayout(self.paths_edit_layout); edit_layout.addRow(paths_group_box); self._refresh_edit_paths_labels()
         btn_add_path = QPushButton("Adicionar Executável"); btn_add_path.clicked.connect(self._edit_add_path); edit_layout.addRow(btn_add_path)
         btn_remove_path = QPushButton("Remover Selecionado"); btn_remove_path.clicked.connect(self._edit_remove_path); edit_layout.addRow(btn_remove_path)
-        
-        img_path = self.current_edited_game.get('image'); img_text = os.path.basename(img_path) if img_path else 'Nenhuma selecionada'
-        self.img_btn_ref = QPushButton(f"Alterar imagem ({img_text})") # Salva a referência
-        self.img_btn_ref.clicked.connect(self._edit_change_image); edit_layout.addRow(self.img_btn_ref)
-
-        bg_path = self.current_edited_game.get('background'); bg_text = os.path.basename(bg_path) if bg_path else 'Nenhuma selecionada'
-        self.bg_btn_ref = QPushButton(f"Alterar imagem de fundo ({bg_text})") # Salva a referência
-        self.bg_btn_ref.clicked.connect(self._edit_change_background); edit_layout.addRow(self.bg_btn_ref)
-        
+        img_path = self.current_edited_game.get('image'); img_text = os.path.basename(img_path) if img_path else 'Nenhuma selecionada'; img_btn = QPushButton(f"Alterar imagem ({img_text})")
+        bg_path = self.current_edited_game.get('background'); bg_text = os.path.basename(bg_path) if bg_path else 'Nenhuma selecionada'; bg_btn = QPushButton(f"Alterar imagem de fundo ({bg_text})")
+        img_btn.clicked.connect(self._edit_change_image); edit_layout.addRow(img_btn); bg_btn.clicked.connect(self._edit_change_background); edit_layout.addRow(bg_btn)
         btn_save = QPushButton("Salvar Alterações"); btn_save.setStyleSheet("background-color: #3c3; color: black; font-weight: bold;"); btn_save.clicked.connect(lambda: self._save_edited_game(name_input.text(), edit_dialog)); edit_layout.addRow(btn_save)
         edit_dialog.setLayout(edit_layout);
         if edit_dialog.exec_(): self.main_window_ref.refresh_views(); self.accept()
-
-    def _fetch_steam_artwork(self, game_name, img_button_ref, bg_button_ref):
-        app_id = steam_api.find_appid_by_name(game_name)
-        if not app_id:
-            self.main_window_ref.show_message_box("Não encontrado", f"Não foi possível encontrar um jogo correspondente a '{game_name}' na lista de apps da Steam. Tente ajustar o nome.", "warning")
-            return
-
-        artwork = steam_api.download_steam_artwork(app_id)
-        if not artwork:
-            self.main_window_ref.show_message_box("Sem Arte", f"Jogo encontrado (AppID: {app_id}), mas não foi possível baixar a arte.", "warning")
-            return
-            
-        # Atualiza os dados em memória
-        new_image_path = artwork.get("image")
-        if new_image_path:
-            self.current_edited_game["image"] = new_image_path
-            img_button_ref.setText(f"Alterar imagem ({os.path.basename(new_image_path)})")
-            
-        new_bg_path = artwork.get("background")
-        if new_bg_path:
-            self.current_edited_game["background"] = new_bg_path
-            bg_button_ref.setText(f"Alterar imagem de fundo ({os.path.basename(new_bg_path)})")
-
-        self.main_window_ref.show_message_box("Sucesso", "Arte da Steam baixada e aplicada! Clique em 'Salvar Alterações' para confirmar.", "info")
-
     def _refresh_edit_paths_labels(self):
         for i in reversed(range(self.paths_edit_layout.count())):
             widget = self.paths_edit_layout.itemAt(i).widget()
-            if widget:
-                widget.setParent(None)
+            if widget: widget.setParent(None)
         if self.current_edited_game.get("paths"):
             for d in self.current_edited_game["paths"]:
-                lbl = QLabel(f"• {d.get('display_name', '')} — {os.path.basename(d['path'])}")
-                lbl.setStyleSheet("color: white;")
-                lbl.setWordWrap(True)
-                self.paths_edit_layout.addWidget(lbl)
+                lbl = QLabel(f"• {d.get('display_name', '')} — {os.path.basename(d['path'])}"); lbl.setStyleSheet("color: white;"); lbl.setWordWrap(True); self.paths_edit_layout.addWidget(lbl)
         else:
-            lbl = QLabel("(Nenhum executável adicionado)")
-            lbl.setStyleSheet("color: #777; font-style: italic;")
-            self.paths_edit_layout.addWidget(lbl)
-    
+            lbl = QLabel("(Nenhum executável adicionado)"); lbl.setStyleSheet("color: #777; font-style: italic;"); self.paths_edit_layout.addWidget(lbl)
     def _edit_add_path(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Selecionar executável")
         if file_path:
             name, ok = QInputDialog.getText(self, "Nome de Exibição", "Digite um nome para este executável:", QLineEdit.Normal, os.path.basename(file_path))
             if ok and name.strip():
                 if not any(d['path'] == file_path for d in self.current_edited_game["paths"]):
-                    self.current_edited_game["paths"].append({"path": file_path, "display_name": name.strip()})
-                    self._refresh_edit_paths_labels()
-
+                    self.current_edited_game["paths"].append({"path": file_path, "display_name": name.strip()}); self._refresh_edit_paths_labels()
     def _edit_remove_path(self):
-        if not self.current_edited_game.get("paths"):
-            self.main_window_ref.show_message_box("Erro", "Não há executáveis para remover.", "warning")
-            return
+        if not self.current_edited_game.get("paths"): self.main_window_ref.show_message_box("Erro", "Não há executáveis para remover.", "warning"); return
         items = [f"{d.get('display_name', '')} - {os.path.basename(d['path'])}" for d in self.current_edited_game["paths"]]
         item, ok = QInputDialog.getItem(self, "Remover Executável", "Selecione o executável para remover:", items, 0, False)
         if ok and item:
             for idx, d in enumerate(self.current_edited_game["paths"]):
                 if f"{d.get('display_name', '')} - {os.path.basename(d['path'])}" == item:
-                    del self.current_edited_game["paths"][idx]
-                    break
+                    del self.current_edited_game["paths"][idx]; break
             self._refresh_edit_paths_labels()
-
     def _edit_change_image(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Selecionar imagem", filter="Images (*.png *.jpg *.jpeg *.bmp *.webp)")
         if file_path:
-            self.current_edited_game["image"] = file_path
-            sender_button = self.sender()
-            if sender_button:
-                sender_button.setText(f"Alterar imagem ({os.path.basename(file_path)})")
-
+            self.current_edited_game["image"] = file_path; sender_button = self.sender()
+            if sender_button: sender_button.setText(f"Alterar imagem ({os.path.basename(file_path)})")
     def _edit_change_background(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Selecionar imagem de fundo", filter="Images (*.png *.jpg *.jpeg *.bmp *.webp)")
         if file_path:
-            self.current_edited_game["background"] = file_path
-            sender_button = self.sender()
-            if sender_button:
-                sender_button.setText(f"Alterar imagem de fundo ({os.path.basename(file_path)})")
-
+            self.current_edited_game["background"] = file_path; sender_button = self.sender()
+            if sender_button: sender_button.setText(f"Alterar imagem de fundo ({os.path.basename(file_path)})")
     def _save_edited_game(self, new_name, dialog):
         new_name = new_name.strip()
-        if not new_name or not self.current_edited_game["paths"]:
-            self.main_window_ref.show_message_box("Erro", "Nome e ao menos um executável são obrigatórios.", "warning")
-            return
+        if not new_name or not self.current_edited_game["paths"]: self.main_window_ref.show_message_box("Erro", "Nome e ao menos um executável são obrigatórios.", "warning"); return
         self.current_edited_game["name"] = new_name
+        tags_text = self.tags_input.text().strip()
+        tags_list = []
+        if tags_text:
+            tags_list = [tag.strip() for tag in tags_text.split(',')]
+        self.current_edited_game["tags"] = tags_list
         self.game_manager.update_game(self.original_game_state, self.current_edited_game)
         dialog.accept()
-
     def _delete_game(self):
         reply = self.main_window_ref.show_message_box("Confirmar exclusão", f"Tem certeza que deseja excluir '{self.game['name']}'?", "question", QMessageBox.Yes | QMessageBox.No)
         if reply == QMessageBox.Yes:
-            self.game_manager.delete_game(self.game)
-            self.main_window_ref.refresh_views()
-            self.accept()
+            self.game_manager.delete_game(self.game); self.main_window_ref.refresh_views(); self.accept()
