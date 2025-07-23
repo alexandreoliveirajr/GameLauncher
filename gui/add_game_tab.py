@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import (
     QPushButton, QFileDialog, QFormLayout, QGroupBox, QInputDialog
 )
 from PyQt5.QtCore import Qt
+from core.theme import current_theme
 
 class AddGameTab(QWidget):
     def __init__(self, game_manager, main_window_ref):
@@ -21,7 +22,7 @@ class AddGameTab(QWidget):
         main_layout.setAlignment(Qt.AlignCenter)
 
         title_label = QLabel("Adicionar Novo Jogo")
-        title_label.setStyleSheet("font-size: 24px; font-weight: bold; margin-bottom: 20px; color: white;")
+        title_label.setStyleSheet(f"font-size: 24px; font-weight: bold; margin-bottom: 20px; color: {current_theme['text_primary'].name()};")
         title_label.setAlignment(Qt.AlignCenter)
         main_layout.addWidget(title_label)
 
@@ -32,17 +33,27 @@ class AddGameTab(QWidget):
 
         self.name_input = QLineEdit()
         self.name_input.setPlaceholderText("Nome do jogo (obrigatório)")
-        self.name_input.setStyleSheet("background-color: #333; color: white; border: 1px solid #555; border-radius: 5px; padding: 8px;")
+        self.name_input.setStyleSheet(f"""
+            background-color: {current_theme['input_background'].name()}; 
+            color: {current_theme['text_primary'].name()}; 
+            border: 1px solid {current_theme['input_border'].name()}; 
+            border-radius: 5px; padding: 8px;
+        """)
         form_layout.addRow("Nome:", self.name_input)
         
-        # ADICIONADO: Campo para as Tags
+        # Campo para as Tags
         self.tags_input = QLineEdit()
         self.tags_input.setPlaceholderText("RPG, Indie, Ação... (separadas por vírgula)")
-        self.tags_input.setStyleSheet("background-color: #333; color: white; border: 1px solid #555; border-radius: 5px; padding: 8px;")
+        self.tags_input.setStyleSheet(f"""
+            background-color: {current_theme['input_background'].name()}; 
+            color: {current_theme['text_primary'].name()}; 
+            border: 1px solid {current_theme['input_border'].name()}; 
+            border-radius: 5px; padding: 8px;
+        """)
         form_layout.addRow("Tags (Opcional):", self.tags_input)
 
         paths_group_box = QGroupBox("Caminhos dos Executáveis")
-        paths_group_box.setStyleSheet("color: white;")
+        paths_group_box.setStyleSheet(f"color: {current_theme['text_primary'].name()};")
         self.paths_layout = QVBoxLayout()
         paths_group_box.setLayout(self.paths_layout)
         form_layout.addRow(paths_group_box)
@@ -119,9 +130,14 @@ class AddGameTab(QWidget):
             if widget: widget.setParent(None)
         if self.current_paths:
             for d in self.current_paths:
-                lbl = QLabel(f"• {d['display_name']} — {os.path.basename(d['path'])}"); lbl.setStyleSheet("color: white;"); lbl.setWordWrap(True); self.paths_layout.addWidget(lbl)
+                lbl = QLabel(f"• {d['display_name']} — {os.path.basename(d['path'])}")
+                lbl.setStyleSheet(f"color: {current_theme['text_primary'].name()};")
+                lbl.setWordWrap(True)
+                self.paths_layout.addWidget(lbl)
         else:
-            lbl = QLabel("(Nenhum executável adicionado)"); lbl.setStyleSheet("color: #777; font-style: italic;"); self.paths_layout.addWidget(lbl)
+            lbl = QLabel("(Nenhum executável adicionado)")
+            lbl.setStyleSheet(f"color: {current_theme['text_placeholder'].name()}; font-style: italic;")
+            self.paths_layout.addWidget(lbl)
 
     def _select_file_dialog(self, label_widget, file_type):
         filter_str = "Images (*.png *.jpg *.jpeg *.bmp *.webp);;All Files (*)"
@@ -129,7 +145,8 @@ class AddGameTab(QWidget):
         if file_path:
             if file_type == "image": self.image_path = file_path
             elif file_type == "background": self.background_path = file_path
-            label_widget.setText(os.path.basename(file_path)); label_widget.setStyleSheet("color: white;")
+            label_widget.setText(os.path.basename(file_path))
+            label_widget.setStyleSheet(f"color: {current_theme['text_primary'].name()};")
         else: pass
 
     def _add_game(self):
@@ -160,8 +177,9 @@ class AddGameTab(QWidget):
         self.tags_input.clear() # Limpa o campo de tags também
         self.current_paths = []
         self._refresh_paths_display()
-        self.image_path_label.setText("Nenhuma imagem selecionada"); self.image_path_label.setStyleSheet("color: #aaa; font-style: italic;")
-        self.background_path_label.setText("Nenhum fundo selecionado"); self.background_path_label.setStyleSheet("color: #aaa; font-style: italic;")
+        self.image_path_label.setStyleSheet(f"color: {current_theme['text_secondary'].name()}; font-style: italic;")
+        self.background_path_label.setText("Nenhum fundo selecionado")
+        self.background_path_label.setStyleSheet(f"color: {current_theme['text_secondary'].name()}; font-style: italic;")
         if hasattr(self, 'image_path'): delattr(self, 'image_path')
         if hasattr(self, 'background_path'): delattr(self, 'background_path')
         

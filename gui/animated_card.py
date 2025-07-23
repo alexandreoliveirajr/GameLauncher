@@ -4,9 +4,9 @@ import os
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QGraphicsDropShadowEffect
 from PyQt5.QtGui import QPixmap, QColor, QPainter
 from PyQt5.QtCore import QPropertyAnimation, QRect, QEasingCurve, Qt
+from core.theme import current_theme
 
 class AnimatedGameCard(QPushButton):
-    # MODIFICADO: Adicionado 'title' ao construtor
     def __init__(self, game, title="", card_size=(200, 220), mode='vertical', parent=None):
         super().__init__(parent)
         self.game = game
@@ -25,17 +25,17 @@ class AnimatedGameCard(QPushButton):
         else:
             self._setup_horizontal_layout()
         
-        self.setStyleSheet("""
-            QPushButton {
-                background-color: #2e2e2e;
-                color: white;
-                border: 1px solid #3a3d40;
+        self.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {current_theme['card'].name()};
+                color: {current_theme['text_primary'].name()};
+                border: 1px solid {current_theme['card_border'].name()};
                 border-radius: 12px;
                 text-align: center;
-            }
-            QPushButton:hover {
-                border: 1px solid #4a90e2; 
-            }
+            }}
+            QPushButton:hover {{
+                border: 1px solid {current_theme['accent'].name()};
+            }}
         """)
 
     def _setup_vertical_layout(self):
@@ -48,7 +48,8 @@ class AnimatedGameCard(QPushButton):
             image_label.setPixmap(pixmap)
         else:
             placeholder_pixmap = QPixmap(self.card_size[0] - 20, self.card_size[1] - 50); placeholder_pixmap.fill(QColor("#333"))
-            painter = QPainter(placeholder_pixmap); painter.setPen(QColor("white")); painter.drawText(placeholder_pixmap.rect(), Qt.AlignCenter, "Sem Imagem"); painter.end()
+            painter = QPainter(placeholder_pixmap)
+            painter.setPen(QColor(current_theme['text_primary'])); painter.drawText(placeholder_pixmap.rect(), Qt.AlignCenter, "Sem Imagem"); painter.end()
             image_label.setPixmap(placeholder_pixmap)
         image_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(image_label)
@@ -73,7 +74,7 @@ class AnimatedGameCard(QPushButton):
         
         # MODIFICADO: Usa o self.title que foi passado no construtor
         title_label = QLabel(self.title)
-        title_label.setStyleSheet("font-size: 12px; font-weight: bold; color: #4a90e2; background: transparent; border: none;")
+        title_label.setStyleSheet(f"font-size: 12px; font-weight: bold; color: {current_theme['accent'].name()}; background: transparent; border: none;")
         
         name_label = QLabel(self.game["name"]); name_label.setStyleSheet("font-size: 24px; font-weight: bold; background: transparent; color: white; border: none;"); name_label.setWordWrap(True)
         playtime_seconds = self.game.get("total_playtime", 0); playtime_hours = playtime_seconds / 3600

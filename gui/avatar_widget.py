@@ -3,6 +3,7 @@
 from PyQt5.QtWidgets import QWidget, QLabel, QVBoxLayout
 from PyQt5.QtGui import QPixmap, QPainter, QBitmap, QColor
 from PyQt5.QtCore import Qt, QSize, QPoint
+from core.theme import current_theme
 
 class AvatarWidget(QWidget):
     def __init__(self, size=150, parent=None):
@@ -30,7 +31,11 @@ class AvatarWidget(QWidget):
             self.image_label.setPixmap(pixmap)
         else:
             self.image_label.setText("SEM\nAVATAR")
-            self.image_label.setStyleSheet("background-color: #111; color: #555; font-weight: bold;")
+            self.image_label.setStyleSheet(f"""
+                background-color: {current_theme['background_darker'].name()}; 
+                color: {current_theme['input_border'].name()}; 
+                font-weight: bold;
+            """)
             self.image_label.setAlignment(Qt.AlignCenter)
     
     def paintEvent(self, event):

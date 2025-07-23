@@ -3,13 +3,14 @@
 import os
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QFileDialog,
-    QListWidget, QListWidgetItem, QCheckBox, QLabel, QMessageBox, QFrame
+    QListWidget, QListWidgetItem, QCheckBox, QLabel, QMessageBox, QFrame, QApplication
 )
 from PyQt5.QtCore import Qt
 
 from core.folder_scanner import FolderScanner
 from core.settings_manager import SettingsManager
 from core import steam_api
+from core.theme import current_theme
 
 class ImportTab(QWidget):
     def __init__(self, game_manager, main_window_ref):
@@ -26,35 +27,31 @@ class ImportTab(QWidget):
         main_layout.setContentsMargins(20, 20, 20, 20)
         main_layout.setSpacing(15)
 
+        label_style = f"font-size: 16px; font-weight: bold; color: {current_theme['text_primary'].name()};"
+        
         steam_tools_label = QLabel("Ferramentas da Steam")
-        steam_tools_label.setStyleSheet("font-size: 16px; font-weight: bold;")
+        steam_tools_label.setStyleSheet(label_style)
         main_layout.addWidget(steam_tools_label)
         
         update_app_list_btn = QPushButton("Baixar/Atualizar Lista de Apps da Steam")
-        update_app_list_btn.setStyleSheet("padding: 10px; font-size: 12px;")
         update_app_list_btn.clicked.connect(self.update_steam_list)
         main_layout.addWidget(update_app_list_btn)
 
         auto_scan_label = QLabel("Buscas por Launcher")
-        auto_scan_label.setStyleSheet("font-size: 16px; font-weight: bold; margin-top: 10px;")
+        auto_scan_label.setStyleSheet(f"{label_style} margin-top: 10px;")
         main_layout.addWidget(auto_scan_label)
         
         auto_scan_layout = QHBoxLayout()
         steam_btn = QPushButton("Varrer Biblioteca Steam")
-        steam_btn.setStyleSheet("padding: 12px; font-size: 14px;")
         steam_btn.clicked.connect(self.scan_steam)
         auto_scan_layout.addWidget(steam_btn)
-
         epic_btn = QPushButton("Varrer Biblioteca Epic")
-        epic_btn.setStyleSheet("padding: 12px; font-size: 14px;")
-        # CORRIGIDO: Botão ativado e conectado
         epic_btn.clicked.connect(self.scan_epic)
-        epic_btn.setEnabled(True)
         auto_scan_layout.addWidget(epic_btn)
         main_layout.addLayout(auto_scan_layout)
 
         manual_scan_label = QLabel("Busca Manual")
-        manual_scan_label.setStyleSheet("font-size: 16px; font-weight: bold; margin-top: 10px;")
+        manual_scan_label.setStyleSheet(f"{label_style} margin-top: 10px;")
         main_layout.addWidget(manual_scan_label)
         
         manual_buttons_layout = QHBoxLayout()
@@ -66,10 +63,39 @@ class ImportTab(QWidget):
         manual_buttons_layout.addWidget(deep_scan_btn)
         main_layout.addLayout(manual_buttons_layout)
         
-        line = QFrame(); line.setFrameShape(QFrame.HLine); line.setFrameShadow(QFrame.Sunken); main_layout.addWidget(line)
-        results_label = QLabel("Resultados da Varredura:"); results_label.setStyleSheet("font-size: 14px; font-weight: bold;"); main_layout.addWidget(results_label)
-        self.results_list = QListWidget(); self.results_list.setStyleSheet("font-size: 14px;"); main_layout.addWidget(self.results_list)
-        action_layout = QHBoxLayout(); select_all_btn = QPushButton("Marcar Todos"); select_all_btn.clicked.connect(self.select_all); action_layout.addWidget(select_all_btn); deselect_all_btn = QPushButton("Desmarcar Todos"); deselect_all_btn.clicked.connect(self.deselect_all); action_layout.addWidget(deselect_all_btn); action_layout.addStretch(); import_btn = QPushButton("✅ Adicionar Selecionados"); import_btn.setStyleSheet("background-color: #3c3; color: black; font-weight: bold; padding: 10px;"); import_btn.clicked.connect(self.import_selected_games); action_layout.addWidget(import_btn)
+        # --- SEÇÃO CORRIGIDA ---
+        line = QFrame()
+        line.setFrameShape(QFrame.HLine)
+        line.setFrameShadow(QFrame.Sunken)
+        main_layout.addWidget(line)
+
+        results_label = QLabel("Resultados da Varredura:")
+        results_label.setStyleSheet(f"font-size: 14px; font-weight: bold; color: {current_theme['text_primary'].name()};")
+        main_layout.addWidget(results_label)
+
+        self.results_list = QListWidget()
+        self.results_list.setStyleSheet(f"font-size: 14px; color: {current_theme['text_primary'].name()};")
+        main_layout.addWidget(self.results_list)
+
+        action_layout = QHBoxLayout()
+        select_all_btn = QPushButton("Marcar Todos")
+        select_all_btn.clicked.connect(self.select_all)
+        action_layout.addWidget(select_all_btn)
+
+        deselect_all_btn = QPushButton("Desmarcar Todos")
+        deselect_all_btn.clicked.connect(self.deselect_all)
+        action_layout.addWidget(deselect_all_btn)
+        action_layout.addStretch()
+
+        import_btn = QPushButton("✅ Adicionar Selecionados")
+        import_btn.setStyleSheet(f"""
+            background-color: {current_theme['accent_success_bright'].name()}; 
+            color: {current_theme['text_inverted'].name()}; 
+            font-weight: bold; padding: 10px;
+        """)
+        import_btn.clicked.connect(self.import_selected_games)
+        action_layout.addWidget(import_btn)
+        
         main_layout.addLayout(action_layout)
 
     def update_steam_list(self):
@@ -134,10 +160,16 @@ class ImportTab(QWidget):
 
     def _execute_scan(self, scan_method, path):
         self.results_list.clear()
-        loading_item = QListWidgetItem("Varrerendo... por favor, aguarde.")
-        self.results_list.addItem(loading_item)
-        self.main_window_ref.app.processEvents()
+        loading_label = QLabel("Varrendo... Por favor, aguarde.", self)
+        loading_label.setStyleSheet("background-color: rgba(0, 0, 0, 0.7); color: white; font-size: 18px;")
+        loading_label.setAlignment(Qt.AlignCenter)
+        loading_label.setGeometry(self.rect()) # Cobre a aba inteira
+        loading_label.show()
+        QApplication.processEvents()
+
         self.found_games_list = scan_method(path)
+
+        loading_label.hide()
         self.populate_results()
         
     def populate_results(self):

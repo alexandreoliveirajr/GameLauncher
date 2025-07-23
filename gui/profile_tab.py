@@ -6,13 +6,14 @@ from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QDialog, 
     QScrollArea, QSpacerItem, QSizePolicy
 )
-from PyQt5.QtGui import QPainter, QColor, QBrush, QPixmap
+from PyQt5.QtGui import QPainter, QColor, QBrush, QPixmap, QColor
 from PyQt5.QtCore import Qt, QPoint
 
 from gui.edit_profile_dialog import EditProfileDialog
 from gui.profile_widgets import StatBox
 from gui.avatar_widget import AvatarWidget
 from gui.animated_card import AnimatedGameCard
+from core.theme import current_theme
 
 class ProfileTab(QWidget):
     # (O __init__, paintEvent, e _setup_ui continuam os mesmos)
@@ -40,7 +41,12 @@ class ProfileTab(QWidget):
         self.main_layout.setContentsMargins(30, 30, 30, 20)
         self.main_layout.setSpacing(20)
         header_panel = QWidget()
-        header_panel.setStyleSheet("background-color: rgba(42, 45, 48, 0.75); border-radius: 15px;")
+        panel_color = current_theme['panel_background']
+        r, g, b, a = panel_color.getRgb()
+        header_panel.setStyleSheet(f"""
+            background-color: rgba({r}, {g}, {b}, {a}); 
+            border-radius: 15px;
+        """)
         header_layout = QHBoxLayout(header_panel)
         header_layout.setContentsMargins(20, 20, 20, 20)
         self.avatar_widget = AvatarWidget(size=180)
@@ -57,7 +63,11 @@ class ProfileTab(QWidget):
         info_layout.addStretch()
         header_layout.addLayout(info_layout, 1)
         edit_button = QPushButton("✏️ Editar Perfil")
-        edit_button.setStyleSheet("padding: 10px 15px; font-size: 14px; border-radius: 8px; color: white; background-color: #444;")
+        edit_button.setStyleSheet(f"""
+            padding: 10px 15px; font-size: 14px; border-radius: 8px; 
+            color: {current_theme['text_primary'].name()}; 
+            background-color: {current_theme['button_neutral'].name()};
+        """)
         edit_button.clicked.connect(self.edit_profile)
         header_layout.addWidget(edit_button, alignment=Qt.AlignTop)
         self.main_layout.addWidget(header_panel)

@@ -4,8 +4,9 @@ import os
 from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QFormLayout, QLineEdit, QTextEdit,
     QPushButton, QFileDialog, QHBoxLayout, QSpacerItem, QSizePolicy,
-    QComboBox # Importa o ComboBox
+    QComboBox
 )
+from core.theme import current_theme
 
 class EditProfileDialog(QDialog):
     def __init__(self, profile_manager, game_manager, parent=None):
@@ -19,19 +20,26 @@ class EditProfileDialog(QDialog):
 
         self.setWindowTitle("Editar Perfil")
         self.setMinimumWidth(500)
-        self.setStyleSheet("""
-            QDialog { background-color: #1e1e1e; color: white; }
-            QLineEdit, QTextEdit, QComboBox { 
-                background-color: #2a2a2a; border: 1px solid #444; 
-                border-radius: 5px; padding: 8px; color: white;
-            }
-            QPushButton { 
+        self.setStyleSheet(f"""
+            QDialog {{ 
+                background-color: {current_theme['background'].name()}; 
+                color: {current_theme['text_primary'].name()}; 
+            }}
+            QLineEdit, QTextEdit, QComboBox {{ 
+                background-color: {current_theme['button_options'].name()}; 
+                border: 1px solid {current_theme['button_neutral'].name()}; 
+                border-radius: 5px; padding: 8px; 
+                color: {current_theme['text_primary'].name()};
+            }}
+            QPushButton {{ 
                 padding: 10px 15px; font-size: 14px; border-radius: 8px;
-                background-color: #444;
-            }
-            QPushButton#saveButton {
-                background-color: #3c3; color: black; font-weight: bold;
-            }
+                background-color: {current_theme['button_neutral'].name()};
+            }}
+            QPushButton#saveButton {{
+                background-color: {current_theme['accent_success_bright'].name()}; 
+                color: {current_theme['text_inverted'].name()}; 
+                font-weight: bold;
+            }}
         """)
 
         self._setup_ui()

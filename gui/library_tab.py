@@ -42,6 +42,7 @@ class LibraryTab(QWidget):
             QPushButton:hover { background-color: #3a3a3a; }
         """)
         self.options_btn.clicked.connect(self.show_options_menu)
+        self.options_btn.setToolTip("Exibir opções de visualização e ordenação")
         toolbar.addWidget(self.options_btn)
         main_layout.addLayout(toolbar)
 
@@ -72,7 +73,6 @@ class LibraryTab(QWidget):
         scroll_area.setStyleSheet("background-color: transparent; border: none;")
         
         container = QWidget()
-        container.setStyleSheet("background-color: transparent;")
         scroll_area.setWidget(container)
         
         return scroll_area

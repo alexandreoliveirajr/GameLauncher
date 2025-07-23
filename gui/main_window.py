@@ -1,6 +1,7 @@
 # game_launcher/gui/main_window.py
 
 import sys
+import logging
 from datetime import datetime
 from PyQt5.QtWidgets import (
     QMainWindow, QTabWidget, QWidget, QVBoxLayout,
@@ -15,6 +16,7 @@ from core.game_manager import GameManager
 from core.game_launcher import GameLauncher
 from core.profile_manager import ProfileManager
 from core.settings_manager import SettingsManager
+from core.theme import current_theme
 
 from gui.add_game_tab import AddGameTab
 from gui.library_tab import LibraryTab
@@ -30,37 +32,35 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Launcher de Jogos")
         
         # --- FOLHA DE ESTILOS ---
-        self.setStyleSheet("""
-            QMainWindow {
-                background-color: #1e1e1e;
-                color: white;
+        self.setStyleSheet(f"""
+            QMainWindow {{
+                background-color: {current_theme['background'].name()};
+                color: {current_theme['text_primary'].name()};
                 font-family: 'Segoe UI', 'Arial', sans-serif;
-            }
-            QLineEdit#search_input {
-                background-color: #2a2a2a;
-                border: 1px solid #444;
+            }}
+            QLineEdit#search_input {{
+                background-color: {current_theme['button_options'].name()};
+                border: 1px solid {current_theme['button_neutral'].name()};
                 border-radius: 10px;
                 padding: 5px 12px;
-                color: white;
+                color: {current_theme['text_primary'].name()};
                 font-size: 14px;
-                selection-background-color: #66b3ff;
-                selection-color: white;
-            }
-            QLineEdit#search_input::placeholder {
-                color: #888;
-            }
-            QLineEdit#search_input:focus {
-                border: 1px solid #66b3ff;
+            }}
+            QLineEdit#search_input::placeholder {{
+                color: {current_theme['text_placeholder'].name()};
+            }}
+            QLineEdit#search_input:focus {{
+                border: 1px solid {current_theme['accent'].name()};
                 background-color: #333;
-            }
-            QTabWidget::pane {
-                border: 1px solid #444;
-                background-color: #1e1e1e;
+            }}
+            QTabWidget::pane {{
+                border: 1px solid {current_theme['button_neutral'].name()};
+                background-color: {current_theme['background'].name()};
                 border-top: none;
-            }
-            QTabBar::tab {
+            }}
+            QTabBar::tab {{
                 background: #2c2c2c;
-                color: white;
+                color: {current_theme['text_primary'].name()};
                 padding: 12px 30px;
                 margin: 0px 1px;
                 border: 1px solid #3a3a3a;
@@ -68,71 +68,38 @@ class MainWindow(QMainWindow):
                 border-top-left-radius: 8px;
                 border-top-right-radius: 8px;
                 min-width: 100px;
-            }
-            QTabBar::tab:selected {
-                background: #444;
+            }}
+            QTabBar::tab:selected {{
+                background: {current_theme['button_neutral'].name()};
                 border-color: #555;
                 font-weight: bold;
-            }
-            QTabBar::tab:hover {
+            }}
+            QTabBar::tab:hover {{
                 background: #555;
-            }
-            QTabBar::scroller {
-                width: 60px;
-            }
-            QTabWidget::tab-bar {
-                alignment: left;
-                border-bottom: 1px solid #444;
-            }
-
-            QScrollBar:vertical {
+            }}
+            QScrollBar:vertical {{
                 border: none;
-                background: #1e1e1e;
+                background: {current_theme['background'].name()};
                 width: 14px;
                 margin: 15px 0 15px 0;
-                border-radius: 0px;
-            }
-            QScrollBar::handle:vertical {
-                background-color: #4a4a4a;
+            }}
+            QScrollBar::handle:vertical {{
+                background-color: {current_theme['scrollbar'].name()};
                 min-height: 30px;
                 border-radius: 7px;
-            }
-            QScrollBar::handle:vertical:hover {
-                background-color: #5a5a5a;
-            }
-            QScrollBar::handle:vertical:pressed {
-                background-color: #6a6a6a;
-            }
-            QScrollBar::sub-line:vertical, QScrollBar::add-line:vertical {
-                border: none;
-                background: none;
-                height: 15px;
-            }
-            QScrollBar::up-arrow:vertical, QScrollBar::down-arrow:vertical {
-                background: none;
-            }
-            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
-                background: none;
-            }
-
-                        QMenu {
-                background-color: #2a2d30;
-                color: white;
-                border: 1px solid #444;
+            }}
+            QMenu {{
+                background-color: {current_theme['menu_background'].name()};
+                color: {current_theme['text_primary'].name()};
+                border: 1px solid {current_theme['button_neutral'].name()};
                 padding: 5px;
-            }
-            QMenu::item {
-                padding: 8px 25px 8px 20px;
-                border-radius: 5px;
-            }
-            QMenu::item:selected {
-                background-color: #4a90e2;
-            }
-            QMenu::separator {
-                height: 1px;
-                background: #444;
-                margin: 5px 0px;
-            }
+            }}
+            QMenu::item:selected {{
+                background-color: {current_theme['accent'].name()};
+            }}
+            QMenu::separator {{
+                background: {current_theme['button_neutral'].name()};
+            }}
 
         """)
 
@@ -211,7 +178,7 @@ class MainWindow(QMainWindow):
                 duration_seconds = (end_time - start_time).total_seconds()
                 seconds_played = int(round(duration_seconds))
                 
-                print(f"'{game['name']}' (PID: {pid}) foi fechado. Tempo jogado: {seconds_played}s.")
+                logging.info(f"Processo do jogo '{game['name']}' (PID: {pid}) finalizado. Duração: {seconds_played}s.")
                 
                 if seconds_played > 0:
                     self.game_manager.add_playtime(game, seconds_played)
@@ -232,7 +199,7 @@ class MainWindow(QMainWindow):
         self.refresh_views()
 
     def refresh_views(self):
-        print("Atualizando todas as abas...")
+        logging.info("Atualizando todas as visualizações (Biblioteca, Favoritos, etc.)...")
         search_term = self.search_input.text()
 
         # --- Lógica da BIBLIOTECA (permanece a mesma) ---
@@ -287,5 +254,16 @@ class MainWindow(QMainWindow):
             msg_box.setIcon(QMessageBox.Critical)
 
         msg_box.setStandardButtons(buttons)
-        msg_box.setStyleSheet("background-color: #2c2c2c; color: white; QPushButton { background-color: #444; color: white; }")
+        msg_box.setStyleSheet(f"""
+            QMessageBox {{
+                background-color: {current_theme['button_options'].name()}; 
+                color: {current_theme['text_primary'].name()};
+            }}
+            QPushButton {{ 
+                background-color: {current_theme['button_neutral'].name()}; 
+                color: {current_theme['text_primary'].name()}; 
+                padding: 8px;
+                min-width: 70px;
+            }}
+        """)
         return msg_box.exec_()

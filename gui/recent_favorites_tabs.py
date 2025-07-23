@@ -14,6 +14,7 @@ from PyQt5.QtWidgets import (
 from gui.game_details_dialog import GameDetailsDialog
 from gui.animated_card import AnimatedGameCard 
 from gui.list_item_widget import GameListItemWidget
+from core.theme import current_theme
 
 
 class FavoritesTab(QWidget):
@@ -46,6 +47,7 @@ class FavoritesTab(QWidget):
             QPushButton:hover { background-color: #3a3a3a; }
         """)
         self.options_btn.clicked.connect(self.show_options_menu)
+        self.options_btn.setToolTip("Exibir opções de visualização e ordenação")
         toolbar.addWidget(self.options_btn)
         main_layout.addLayout(toolbar)
 
@@ -117,7 +119,6 @@ class FavoritesTab(QWidget):
         scroll_area.setWidgetResizable(True)
         scroll_area.setStyleSheet("background-color: transparent; border: none;")
         container = QWidget()
-        container.setStyleSheet("background-color: transparent;")
         scroll_area.setWidget(container)
         return scroll_area
 
@@ -186,7 +187,7 @@ class RecentTab(QWidget):
             hbox.setContentsMargins(5, 2, 5, 2)
             hbox.setSpacing(15)
             name_label = QLabel(game["name"])
-            name_label.setStyleSheet("color: white; font-weight: bold;")
+            name_label.setStyleSheet(f"color: {current_theme['text_primary'].name()}; font-weight: bold;")
             name_label.setFixedWidth(220)
             hbox.addWidget(name_label)
             play_time_obj = game.get("recent_play_time")
@@ -197,13 +198,17 @@ class RecentTab(QWidget):
                 except Exception as e: 
                     dt_str = "Data inválida"
             date_label = QLabel(dt_str)
-            date_label.setStyleSheet("color: #ccc;")
+            date_label.setStyleSheet(f"color: {current_theme['text_secondary'].name()};")
             date_label.setFixedWidth(140)
             hbox.addWidget(date_label)
             spacer = QSpacerItem(20, 10, QSizePolicy.Expanding, QSizePolicy.Minimum)
             hbox.addItem(spacer)
             play_btn = QPushButton("Detalhes")
-            play_btn.setStyleSheet("background-color: #444; color: white; padding: 5px 15px;")
+            play_btn.setStyleSheet(f"""
+                background-color: {current_theme['button_neutral'].name()}; 
+                color: {current_theme['text_primary'].name()}; 
+                padding: 5px 15px;
+            """)
             play_btn.clicked.connect(lambda _, g=game: self._show_game_details(g))
             hbox.addWidget(play_btn)
             container = QWidget()

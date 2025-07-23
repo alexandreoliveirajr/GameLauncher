@@ -10,6 +10,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtGui import QPixmap, QPainter, QBrush, QColor
 from PyQt5.QtCore import Qt, QPoint
+from core.theme import current_theme
 
 class GameDetailsDialog(QDialog):
     def __init__(self, game, game_manager, game_launcher, main_window_ref, parent=None):
@@ -52,7 +53,9 @@ class GameDetailsDialog(QDialog):
         self.main_layout.setContentsMargins(0,0,0,0)
         
         overlay_panel = QWidget()
-        overlay_panel.setStyleSheet("background-color: rgba(20, 20, 22, 0.65);")
+        overlay_color = current_theme['overlay_background']
+        r, g, b, a = overlay_color.getRgb()
+        overlay_panel.setStyleSheet(f"background-color: rgba({r}, {g}, {b}, {a});")
         self.main_layout.addWidget(overlay_panel)
 
         panel_layout = QHBoxLayout(overlay_panel)
@@ -122,7 +125,12 @@ class GameDetailsDialog(QDialog):
             right_column_layout.addWidget(self.exec_combo)
 
         btn_play = QPushButton("▶ Jogar")
-        btn_play.setStyleSheet("padding: 12px; font-size: 16px; font-weight: bold; background-color: #2c9a48; color: white; border-radius: 5px;")
+        btn_play.setStyleSheet(f"""
+            padding: 12px; font-size: 16px; font-weight: bold; 
+            background-color: {current_theme['accent_success'].name()}; 
+            color: {current_theme['text_primary'].name()}; 
+            border-radius: 5px;
+        """)
         if len(paths) > 1:
             btn_play.clicked.connect(self._launch_selected_game)
         elif len(paths) == 1:
