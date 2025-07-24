@@ -1,45 +1,65 @@
 # core/profile_manager.py
 
-import json
-import os
+import logging
 from datetime import datetime
+from core.database import get_db_connection
 
 class ProfileManager:
-    def __init__(self, data_file="profile.json"):
-        self.data_file = data_file
-        self.data = self._load_profile()
+    def __init__(self):
+        """Inicializa o ProfileManager, garantindo que a linha de perfil exista no DB."""
+        self._initialize_profile()
 
-    def _load_profile(self):
-        if not os.path.exists(self.data_file):
-            default_profile = {
-                "username": "Player1",
-                "bio": "Bem-vindo ao meu launcher!",
-                "avatar_path": None,
-                "background_path": None,
-                "showcased_favorite_id": None,
-                "creation_date": datetime.now().isoformat() # ADICIONADO
-            }
-            self.save_profile(default_profile)
-            return default_profile
+    def _initialize_profile(self):
+        """Garante que a linha única de perfil (id=1) exista na tabela."""
+        conn = get_db_connection()
+        cursor = conn.cursor()
         
-        try:
-            with open(self.data_file, "r", encoding="utf-8") as f:
-                content = f.read()
-                if not content:
-                    return self._load_profile()
-                data = json.loads(content)
-                data.setdefault("showcased_favorite_id", None)
-                data.setdefault("creation_date", datetime.now().isoformat()) # ADICIONADO
-                return data
-        except (json.JSONDecodeError, TypeError):
-            print(f"Erro ao ler o arquivo de perfil {self.data_file}. Um novo será criado.")
-            os.rename(self.data_file, self.data_file + ".bak")
-            return self._load_profile()
+        # Adiciona a coluna 'bio' e seu valor padrão à instrução INSERT
+        cursor.execute("""
+            INSERT OR IGNORE INTO profile (id, username, bio, creation_date) 
+            VALUES (?, ?, ?, ?)
+        """, (1, 'Player1', 'Adicione sua bio aqui...', datetime.now().isoformat()))
+        
+        conn.commit()
+        conn.close()
 
     def get_data(self):
-        return self.data
+        """Busca os dados do perfil do banco de dados e retorna como um dicionário."""
+        conn = get_db_connection()
+        # fetchone() busca a única linha que corresponde à consulta
+        row = conn.execute("SELECT * FROM profile WHERE id = 1").fetchone()
+        conn.close()
+        
+        if row:
+            return dict(row)
+        else:
+            # Esta é uma salvaguarda caso a linha seja deletada manualmente.
+            logging.error("A linha de perfil não foi encontrada no banco de dados. Recriando.")
+            self._initialize_profile()
+            return self.get_data()
 
     def save_profile(self, profile_data):
-        self.data = profile_data
-        with open(self.data_file, "w", encoding="utf-8") as f:
-            json.dump(self.data, f, indent=4)
+        """Salva (atualiza) os dados do perfil no banco de dados."""
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Adiciona a coluna 'bio' à instrução UPDATE
+        cursor.execute("""
+            UPDATE profile SET
+                username = ?,
+                bio = ?, 
+                avatar_path = ?,
+                background_path = ?,
+                showcased_favorite_id = ?
+            WHERE id = 1
+        """, (
+            profile_data.get('username'),
+            profile_data.get('bio'), # <-- LINHA ADICIONADA
+            profile_data.get('avatar_path'),
+            profile_data.get('background_path'),
+            profile_data.get('showcased_favorite_id')
+        ))
+        
+        conn.commit()
+        conn.close()
+        logging.info("Dados do perfil salvos no banco de dados.")

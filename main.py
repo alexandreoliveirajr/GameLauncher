@@ -1,13 +1,16 @@
 import sys
 import logging
 from PyQt5.QtWidgets import QApplication
-from gui.main_window import MainWindow # Importa a nossa nova classe MainWindow
+from gui.main_window import MainWindow
+from core.database import initialize_database
 
 def main():
     logging.basicConfig(
         level=logging.INFO, 
         format='%(asctime)s - %(levelname)s - %(message)s'
     )
+
+    initialize_database()
 
     logging.info("Iniciando a aplicação Game Launcher...")
 

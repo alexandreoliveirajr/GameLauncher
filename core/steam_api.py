@@ -5,6 +5,7 @@ import re
 import sys
 import json
 import requests
+import logging
 from PIL import Image
 from io import BytesIO
 
@@ -13,8 +14,6 @@ def get_app_root_path():
         return os.path.dirname(sys.executable)
     else:
         return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-# --- NOVAS FUNÇÕES PARA A LISTA MESTRA DE APPS ---
 
 def update_steam_app_list(app_list_file="steam_app_list.json"):
     """Baixa a lista completa de apps da Steam e salva localmente."""
@@ -65,47 +64,82 @@ def find_appid_by_name(game_name, app_list_file="steam_app_list.json"):
 # --- FUNÇÕES ANTIGAS (CONTINUAM IGUAIS) ---
 
 def find_steam_app_id(game_folder_path):
-    # ... (código igual)
+    """Tenta encontrar a AppID da Steam para uma determinada pasta de jogo."""
+    # Método 1: Procurar por steam_appid.txt
     try:
         appid_file_path = os.path.join(game_folder_path, "steam_appid.txt")
         if os.path.exists(appid_file_path):
-            with open(appid_file_path, "r") as f: content = f.read().strip()
-            if content.isdigit(): return content
-    except Exception as e: print(f"Erro ao ler steam_appid.txt: {e}")
+            with open(appid_file_path, "r") as f:
+                content = f.read().strip()
+            if content.isdigit():
+                return content
+    except Exception as e:
+        logging.warning(f"Erro ao ler steam_appid.txt em {game_folder_path}: {e}")
+
+    # Método 2: Procurar por manifestos de aplicativo (.acf)
     try:
-        steamapps_path = os.path.dirname(game_folder_path); game_folder_name = os.path.basename(game_folder_path)
-        if os.path.basename(steamapps_path) == "common": steamapps_path = os.path.dirname(steamapps_path)
+        steamapps_path = os.path.dirname(game_folder_path)
+        game_folder_name = os.path.basename(game_folder_path)
+
+        if os.path.basename(steamapps_path) == "common":
+            steamapps_path = os.path.dirname(steamapps_path)
+
         if os.path.basename(steamapps_path) == "steamapps":
             for filename in os.listdir(steamapps_path):
                 if filename.startswith("appmanifest_") and filename.endswith(".acf"):
                     try:
-                        with open(os.path.join(steamapps_path, filename), "r", encoding="utf-8") as f: content = f.read()
+                        with open(os.path.join(steamapps_path, filename), "r", encoding="utf-8") as f:
+                            content = f.read()
+                        
+                        # Verifica se o manifesto corresponde à pasta de instalação do jogo
                         if f'"installdir"\t\t"{game_folder_name}"' in content:
                             app_id_match = re.search(r'"appid"\t\t"(\d+)"', content)
-                            if app_id_match: return app_id_match.group(1)
-                    except Exception: continue
-    except Exception as e: print(f"Erro ao procurar por manifestos: {e}")
+                            if app_id_match:
+                                return app_id_match.group(1)
+                    except Exception:
+                        continue # Pula para o próximo arquivo de manifesto em caso de erro
+    except Exception as e:
+        logging.warning(f"Erro ao procurar por manifestos da Steam perto de {game_folder_path}: {e}")
     return None
 
 def download_steam_artwork(app_id, output_folder_name="steam_artwork"):
-    # ... (código igual)
     if not app_id: return None
-    cover_url = f"https://cdn.akamai.steamstatic.com/steam/apps/{app_id}/library_600x900.jpg"
-    background_url = f"https://cdn.akamai.steamstatic.com/steam/apps/{app_id}/library_hero.jpg"
+    poster_url = f"https://cdn.akamai.steamstatic.com/steam/apps/{app_id}/library_600x900.jpg"
+    hero_url = f"https://cdn.akamai.steamstatic.com/steam/apps/{app_id}/library_hero.jpg"
+    header_url = f"https://cdn.akamai.steamstatic.com/steam/apps/{app_id}/header.jpg"
     base_path = get_app_root_path()
     artwork_folder = os.path.join(base_path, output_folder_name, app_id)
     if not os.path.exists(artwork_folder): os.makedirs(artwork_folder)
     artwork_paths = {}
     try:
-        response = requests.get(cover_url, stream=True)
+        response = requests.get(poster_url, stream=True)
         if response.status_code == 200:
-            image = Image.open(BytesIO(response.content)); cover_path = os.path.join(artwork_folder, "cover.png")
-            image.save(cover_path, "PNG"); artwork_paths["image"] = cover_path; print(f"Capa (pôster) baixada para: {cover_path}")
-    except requests.exceptions.RequestException as e: print(f"Não foi possível baixar a capa para o AppID {app_id}: {e}")
+            image = Image.open(BytesIO(response.content))
+            path = os.path.join(artwork_folder, "poster.png")
+            image.save(path, "PNG")
+            artwork_paths["image"] = path 
+            logging.info(f"Pôster (image) baixado para: {path}")
+    except requests.exceptions.RequestException as e: logging.warning(f"Não foi possível baixar o pôster para o AppID {app_id}: {e}")
+
     try:
-        response = requests.get(background_url, stream=True)
+        response = requests.get(hero_url, stream=True)
         if response.status_code == 200:
-            image = Image.open(BytesIO(response.content)); background_path = os.path.join(artwork_folder, "background.png")
-            image.save(background_path, "PNG"); artwork_paths["background"] = background_path; print(f"Fundo (hero) baixado para: {background_path}")
-    except requests.exceptions.RequestException as e: print(f"Não foi possível baixar o fundo para o AppID {app_id}: {e}")
+            image = Image.open(BytesIO(response.content))
+            path = os.path.join(artwork_folder, "hero.png")
+            image.save(path, "PNG")
+            # --- CORREÇÃO DA CHAVE ---
+            artwork_paths["background"] = path
+            logging.info(f"Fundo (background) baixado para: {path}")
+    except requests.exceptions.RequestException as e: logging.warning(f"Não foi possível baixar o fundo para o AppID {app_id}: {e}")
+
+    try:
+        response = requests.get(header_url, stream=True)
+        if response.status_code == 200:
+            image = Image.open(BytesIO(response.content))
+            path = os.path.join(artwork_folder, "header.png")
+            image.save(path, "PNG")
+            artwork_paths["header"] = path
+            logging.info(f"Cabeçalho (header) baixado para: {path}")
+    except requests.exceptions.RequestException as e: logging.warning(f"Não foi possível baixar o cabeçalho para o AppID {app_id}: {e}")
+
     return artwork_paths if artwork_paths else None

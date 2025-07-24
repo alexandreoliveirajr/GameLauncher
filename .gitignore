@@ -3,6 +3,9 @@ games_data.json
 profile.json
 settings.json
 steam_app_list.json
+launcher.db
+*.db
+*.db-journal
 
 # Ignorar pastas e arquivos gerados pelo PyInstaller
 __pycache__/

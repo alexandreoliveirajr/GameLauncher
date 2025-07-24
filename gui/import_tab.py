@@ -15,6 +15,8 @@ from core.theme import current_theme
 class ImportTab(QWidget):
     def __init__(self, game_manager, main_window_ref):
         super().__init__()
+        self.setAutoFillBackground(True)
+        self.setStyleSheet(f"background-color: {current_theme['background'].name()};")
         self.game_manager = game_manager
         self.main_window_ref = main_window_ref
         self.folder_scanner = FolderScanner(self.game_manager)
@@ -202,6 +204,7 @@ class ImportTab(QWidget):
             item = self.results_list.item(i)
             widget = self.results_list.itemWidget(item)
             if isinstance(widget, QCheckBox) and widget.isChecked():
+                # Corrigido para pegar o índice correto da lista de jogos encontrados
                 selected_games.append(self.found_games_list[i])
         
         if not selected_games:
@@ -215,14 +218,26 @@ class ImportTab(QWidget):
 
         for game in selected_games:
             artwork = None
-            if game.get("app_id"):
-                artwork = steam_api.download_steam_artwork(game["app_id"])
+            app_id = game.get("app_id") # Pega o app_id do jogo escaneado
+            if app_id:
+                artwork = steam_api.download_steam_artwork(app_id)
             
             image_path = artwork.get("image") if artwork else None
             background_path = artwork.get("background") if artwork else None
+            header_path = artwork.get("header") if artwork else None
 
             paths_list = [{"path": game['path'], "display_name": os.path.basename(game['path'])}]
-            self.game_manager.add_game(game['name'], paths_list, image_path=image_path, background_path=background_path)
+            
+            # --- CHAMADA CORRIGIDA E COMPLETA ---
+            self.game_manager.add_game(
+                name=game['name'], 
+                paths=paths_list, 
+                image_path=image_path, 
+                background_path=background_path, 
+                header_path=header_path,
+                source='steam', # Informa que a fonte é a Steam
+                app_id=app_id    # Passa o AppID do jogo
+            )
             added_count += 1
         
         self.main_window_ref.show_message_box("Sucesso", f"{added_count} jogo(s) adicionado(s) com sucesso!")

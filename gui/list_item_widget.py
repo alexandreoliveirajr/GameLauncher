@@ -25,7 +25,6 @@ class GameListItemWidget(QWidget):
         self._setup_effects()
 
     def _setup_ui(self):
-        # A UI interna não muda
         main_layout = QHBoxLayout(self)
         main_layout.setContentsMargins(10, 10, 10, 10)
         main_layout.setSpacing(15)
@@ -35,14 +34,16 @@ class GameListItemWidget(QWidget):
         image_label.setStyleSheet("background-color: #1e1e1e; border-radius: 4px;")
         image_label.setAlignment(Qt.AlignCenter)
         
-        image_path = self.game.get("background") or self.game.get("image")
-        if image_path and os.path.exists(image_path):
-            pixmap = QPixmap(image_path)
+        image_to_display = self.game.get("header_path") or self.game.get("image")
+        
+        if image_to_display and os.path.exists(image_to_display):
+            pixmap = QPixmap(image_to_display)
             scaled_pixmap = pixmap.scaled(image_label.size(), Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation)
             image_label.setPixmap(scaled_pixmap)
         else:
             image_label.setText("Sem Arte")
-            image_label.setStyleSheet("background-color: #1e1e1e; border-radius: 4px; color: #888;")
+            image_label.setStyleSheet(f"background-color: {current_theme['background_darker'].name()}; border-radius: 4px; color: {current_theme['text_placeholder'].name()};")
+        
         main_layout.addWidget(image_label)
 
         info_layout = QVBoxLayout()

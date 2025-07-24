@@ -11,6 +11,10 @@ from core.theme import current_theme
 class EditProfileDialog(QDialog):
     def __init__(self, profile_manager, game_manager, parent=None):
         super().__init__(parent)
+        # Pega as "flags" (configurações) atuais da janela
+        flags = self.windowFlags()
+        # Remove APENAS a flag do botão de ajuda, mantendo todas as outras
+        self.setWindowFlags(flags & ~Qt.WindowContextHelpButtonHint)
         self.profile_manager = profile_manager
         self.game_manager = game_manager # Precisamos para listar os favoritos
         self.current_data = self.profile_manager.get_data().copy()

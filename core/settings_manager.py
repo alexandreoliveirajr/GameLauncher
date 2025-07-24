@@ -1,38 +1,34 @@
 # core/settings_manager.py
 
-import json
-import os
+import logging
+from core.database import get_db_connection
 
 class SettingsManager:
-    def __init__(self, settings_file="settings.json"):
-        self.settings_file = settings_file
-        self.settings = self._load_settings()
-
-    def _load_settings(self):
-        if not os.path.exists(self.settings_file):
-            print("Arquivo de configurações não encontrado. Criando um novo.")
-            default_settings = {
-                "steam_common_path": None,
-                "epic_games_path": None
-            }
-            self._save_settings(default_settings)
-            return default_settings
-        
-        try:
-            with open(self.settings_file, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except (json.JSONDecodeError, TypeError):
-            print("Erro ao ler o arquivo de configurações. Um novo será criado.")
-            os.rename(self.settings_file, self.settings_file + ".bak")
-            return self._load_settings()
-
-    def _save_settings(self, settings_data):
-        with open(self.settings_file, "w", encoding="utf-8") as f:
-            json.dump(settings_data, f, indent=4)
+    def __init__(self):
+        """O SettingsManager agora interage diretamente com a tabela 'settings' do DB."""
+        pass
 
     def get_setting(self, key):
-        return self.settings.get(key)
+        """Busca o valor de uma configuração no banco de dados pela sua chave."""
+        conn = get_db_connection()
+        row = conn.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
+        conn.close()
+        
+        if row:
+            return row['value']
+        else:
+            # Retorna None se a configuração ainda não foi definida
+            return None
 
     def save_setting(self, key, value):
-        self.settings[key] = value
-        self._save_settings(self.settings)
+        """Salva (insere ou atualiza) uma configuração no banco de dados."""
+        conn = get_db_connection()
+        
+        # INSERT OR REPLACE é um comando SQLite muito útil.
+        # Se a 'key' não existir, ele insere uma nova linha.
+        # Se a 'key' já existir, ele atualiza o 'value' da linha existente.
+        conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (key, value))
+        
+        conn.commit()
+        conn.close()
+        logging.info(f"Configuração salva: {key} = {value}")

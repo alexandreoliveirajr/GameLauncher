@@ -1,6 +1,7 @@
 # core/folder_scanner.py
 
 import os
+import logging
 from core import steam_api # Importa nosso novo módulo
 
 class FolderScanner:
@@ -72,16 +73,27 @@ class FolderScanner:
     def _run_scan(self, path, is_deep_scan):
         """Executa a varredura (rápida ou completa)."""
         scan_type = "COMPLETA" if is_deep_scan else "RÁPIDA"
-        print(f"Iniciando varredura {scan_type} em: {path}")
+        logging.info(f"Iniciando varredura {scan_type} em: {path}")
         
         found_games = []
-        existing_paths = {os.path.normcase(p['path']) for game in self.game_manager.get_all_games() for p in game.get('paths', [])}
+        
+        # --- LINHA CORRIGIDA ---
+        # Agora busca todos os caminhos de executáveis diretamente do DB
+        existing_paths = self.game_manager.get_all_executable_paths()
 
         try:
             subfolders = [f.path for f in os.scandir(path) if f.is_dir()]
         except (FileNotFoundError, PermissionError) as e:
-            print(f"Erro ao acessar '{path}': {e}")
+            logging.error(f"Erro ao acessar '{path}': {e}")
             return []
+
+        for folder in subfolders:
+            game_data = self._scan_subfolder(folder, existing_paths, is_deep_scan)
+            if game_data:
+                found_games.append(game_data)
+        
+        logging.info(f"Varredura {scan_type} concluída. {len(found_games)} novos jogos encontrados.")
+        return found_games
 
         for folder in subfolders:
             game_data = self._scan_subfolder(folder, existing_paths, is_deep_scan)

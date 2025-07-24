@@ -66,13 +66,14 @@ class AnimatedGameCard(QPushButton):
         image_label.setStyleSheet("background: #1e1e1e; border-radius: 8px; border: none;")
         main_layout.addWidget(image_label)
         
-        if self.game and self.game.get("image") and os.path.exists(self.game["image"]):
-            pixmap = QPixmap(self.game["image"]).scaled(image_label.size(), Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation)
+        image_to_display = self.game.get("header_path") or self.game.get("image")
+
+        if self.game and image_to_display and os.path.exists(image_to_display):
+            pixmap = QPixmap(image_to_display).scaled(image_label.size(), Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation)
             image_label.setPixmap(pixmap)
             
         info_layout = QVBoxLayout(); info_layout.setContentsMargins(5, 5, 5, 5)
         
-        # MODIFICADO: Usa o self.title que foi passado no construtor
         title_label = QLabel(self.title)
         title_label.setStyleSheet(f"font-size: 12px; font-weight: bold; color: {current_theme['accent'].name()}; background: transparent; border: none;")
         

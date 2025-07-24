@@ -1,170 +1,245 @@
 # core/game_manager.py
 
-import json
 import os
-import shutil
+import logging
+import sqlite3
 from datetime import datetime
+from core.database import get_db_connection
 
 class GameManager:
-    def __init__(self, data_file="games_data.json"):
-        self.data_file = data_file
-        self.games = self._load_games()
+    def __init__(self):
+        """O GameManager agora não carrega mais um arquivo, 
+           ele simplesmente prepara-se para interagir com o banco de dados."""
+        pass # Nenhuma inicialização de dados em memória é necessária
 
-    def _load_games(self):
-        if os.path.exists(self.data_file):
-            try:
-                with open(self.data_file, "r", encoding="utf-8") as f:
-                    content = f.read()
-                    if not content:
-                        return []
-                    games_data = json.loads(content)
-                    
-                    needs_saving = False
-                    for game in games_data:
-                        if isinstance(game.get("paths"), str):
-                            game["paths"] = [{"path": game["paths"], "display_name": os.path.basename(game["paths"])}]
-                        
-                        if "recent_play_time" in game and isinstance(game["recent_play_time"], str):
-                            try:
-                                game["recent_play_time"] = datetime.fromisoformat(game["recent_play_time"])
-                            except (ValueError, TypeError):
-                                game["recent_play_time"] = None
-                        
-                        game.setdefault("total_playtime", 0)
+    def _game_from_row(self, row):
+        """Converte uma linha do banco de dados para um dicionário Python."""
+        if not row:
+            return None
+        game = dict(row)
+        game['paths'] = self._get_executables_for_game(game['id'])
+        game['tags'] = self._get_tags_for_game(game['id'])
+        return game
 
-                        if "id" not in game or not game["id"]:
-                            game["id"] = self._generate_id()
-                            needs_saving = True
-                        
-                        game.setdefault("tags", [])
+    def _get_tags_for_game(self, game_id):
+        """Busca todas as tags para um determinado ID de jogo."""
+        conn = get_db_connection()
+        rows = conn.execute("""
+            SELECT t.name FROM tags t
+            JOIN game_tags gt ON t.id = gt.tag_id
+            WHERE gt.game_id = ?
+        """, (game_id,)).fetchall()
+        conn.close()
+        return [row['name'] for row in rows]
 
-                    if needs_saving:
-                        print("Salvando novas IDs ou campos para jogos antigos...")
-                        self._save_games_data(games_data)
+    def _get_executables_for_game(self, game_id):
+        """Busca todos os executáveis para um determinado ID de jogo."""
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT path, display_name FROM executables WHERE game_id = ?", (game_id,))
+        executables = [{"path": row["path"], "display_name": row["display_name"]} for row in cursor.fetchall()]
+        conn.close()
+        return executables
 
-                    return games_data
-            except (json.JSONDecodeError, TypeError) as e:
-                print(f"ERRO: O arquivo '{self.data_file}' parece estar corrompido. Erro: {e}")
-                backup_file = self.data_file + ".bak"
-                shutil.copy(self.data_file, backup_file)
-                print(f"Um backup foi criado em: '{backup_file}'. Iniciando com uma biblioteca vazia.")
-                return []
-        return []
+    def add_game(self, name, paths, image_path=None, background_path=None, header_path=None, tags=None, source='local', app_id=None):
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        try:
+            # A instrução INSERT com 6 colunas
+            cursor.execute("""
+                INSERT INTO games (name, source, app_id, image_path, background_path, header_path)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (name, source, app_id, image_path, background_path, header_path))
+            
+            game_id = cursor.lastrowid
 
-    def _save_games_data(self, games_list):
-        games_to_save = []
-        for game in games_list:
-            game_copy = game.copy()
-            if "recent_play_time" in game_copy and isinstance(game_copy["recent_play_time"], datetime):
-                game_copy["recent_play_time"] = game_copy["recent_play_time"].isoformat()
-            games_to_save.append(game_copy)
+            for exe in paths:
+                cursor.execute("""
+                    INSERT INTO executables (game_id, path, display_name)
+                    VALUES (?, ?, ?)
+                """, (game_id, exe['path'], exe['display_name']))
+            
+            conn.commit()
+            logging.info(f"Jogo '{name}' adicionado ao banco de dados com ID {game_id}.")
+            return True
 
-        with open(self.data_file, "w", encoding="utf-8") as f:
-            json.dump(games_to_save, f, indent=4)
-    
-    def _save_games(self):
-        self._save_games_data(self.games)
-
-    def add_game(self, name, paths, image_path=None, background_path=None, tags=None):
-        new_game = {
-            "id": self._generate_id(), "name": name, "paths": paths, 
-            "image": image_path, "background": background_path, 
-            "favorite": False, "recent_play_time": None, "total_playtime": 0,
-            "tags": tags if tags is not None else []
-        }
-        self.games.append(new_game)
-        self._save_games()
-        return True
+        except sqlite3.IntegrityError:
+            logging.warning(f"Tentativa de adicionar um jogo com executável duplicado: {paths}")
+            conn.rollback()
+            return False
+            
+        finally:
+            conn.close()
 
     def update_game(self, old_game_data, new_game_data):
-        try:
-            index = next(i for i, game in enumerate(self.games) if game["id"] == old_game_data["id"])
-            self.games[index]["name"] = new_game_data.get("name", self.games[index]["name"])
-            self.games[index]["paths"] = new_game_data.get("paths", self.games[index]["paths"])
-            self.games[index]["image"] = new_game_data.get("image", self.games[index]["image"])
-            self.games[index]["background"] = new_game_data.get("background", self.games[index]["background"])
-            self.games[index]["tags"] = new_game_data.get("tags", self.games[index].get("tags", []))
-            self._save_games()
-            return True
-        except StopIteration:
-            print(f"Jogo com ID {old_game_data['id']} não encontrado para atualização.")
-            return False
+        game_id = old_game_data['id']
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Atualiza a tabela 'games'
+        cursor.execute("""
+            UPDATE games SET
+                name = ?, image_path = ?, background_path = ?, header_path = ?
+            WHERE id = ?
+        """, (
+            new_game_data.get('name', old_game_data['name']),
+            new_game_data.get('image', old_game_data.get('image')),
+            new_game_data.get('background', old_game_data.get('background')),
+            new_game_data.get('header', old_game_data.get('header')),
+            game_id
+        ))
+
+        # Deleta os executáveis antigos e insere os novos
+        cursor.execute("DELETE FROM executables WHERE game_id = ?", (game_id,))
+        for exe in new_game_data.get('paths', []):
+            cursor.execute("""
+                INSERT INTO executables (game_id, path, display_name) VALUES (?, ?, ?)
+            """, (game_id, exe['path'], exe['display_name']))
+        
+
+        # Deleta as associações de tags antigas
+        cursor.execute("DELETE FROM game_tags WHERE game_id = ?", (game_id,))
+
+        # Processa e insere as novas tags
+        tags_list = new_game_data.get("tags", [])
+        for tag_name in tags_list:
+            # Insere a tag na tabela 'tags' se ela não existir, e ignora se já existir
+            cursor.execute("INSERT OR IGNORE INTO tags (name) VALUES (?)", (tag_name,))
+            # Pega o ID da tag (seja a que foi inserida ou a que já existia)
+            cursor.execute("SELECT id FROM tags WHERE name = ?", (tag_name,))
+            tag_row = cursor.fetchone()
+            if tag_row:
+                tag_id = tag_row['id']
+                # Cria a associação na tabela 'game_tags'
+                cursor.execute("INSERT INTO game_tags (game_id, tag_id) VALUES (?, ?)", (game_id, tag_id))
+
+        conn.commit()
+        conn.close()
+        logging.info(f"Jogo ID {game_id} atualizado.")
+
+        return True
 
     def delete_game(self, game_to_delete):
-        original_len = len(self.games)
-        self.games = [game for game in self.games if game["id"] != game_to_delete["id"]]
-        if len(self.games) < original_len:
-            self._save_games()
-            return True
-        return False
+        game_id = game_to_delete['id']
+        conn = get_db_connection()
+        # A configuração "ON DELETE CASCADE" na tabela 'executables' garante
+        # que os executáveis associados também sejam deletados.
+        conn.execute("DELETE FROM games WHERE id = ?", (game_id,))
+        conn.commit()
+        conn.close()
+        logging.info(f"Jogo ID {game_id} ('{game_to_delete['name']}') deletado.")
+        return True
 
     def get_all_games(self):
-        return self.games # A ordenação será feita no get_filtered_games
+        """Busca todos os jogos, usado para contagens e verificações internas."""
+        conn = get_db_connection()
+        rows = conn.execute("""
+            SELECT id, name, image_path as image, background_path as background, header_path,
+                   favorite, total_playtime, last_play_time
+            FROM games ORDER BY name COLLATE NOCASE ASC
+        """).fetchall()
+        conn.close()
+        return [dict(row) for row in rows]
 
     def get_game_by_id(self, game_id):
-        return next((game for game in self.games if game["id"] == game_id), None)
-
-    def _generate_id(self):
-        return str(int(datetime.now().timestamp() * 1000))
-
-    def toggle_favorite(self, game):
-        game["favorite"] = not game.get("favorite", False)
-        self._save_games()
-
-    def get_favorite_games(self):
-        favorite_games = [game for game in self.games if game.get("favorite", False)]
-        return sorted(favorite_games, key=lambda game: game['name'].lower())
-
-    def record_recent_play(self, game):
-        game["recent_play_time"] = datetime.now()
-        self._save_games()
-    
-    def add_playtime(self, game_to_update, seconds_played):
-        game_to_update["total_playtime"] = game_to_update.get("total_playtime", 0) + seconds_played
-        print(f"Adicionado {seconds_played}s para {game_to_update['name']}. Total: {game_to_update['total_playtime']}s")
-        self._save_games()
-
-    def get_recent_games(self):
-        for g in self.games:
-            if isinstance(g.get("recent_play_time"), str):
-                try: g["recent_play_time"] = datetime.fromisoformat(g["recent_play_time"])
-                except: g["recent_play_time"] = None
-        return sorted(
-            [game for game in self.games if game.get("recent_play_time")],
-            key=lambda x: x.get("recent_play_time", datetime.min),
-            reverse=True
-        )
+        """Busca um único jogo pelo seu ID no banco de dados."""
+        if not game_id:
+            return None
+        conn = get_db_connection()
+        row = conn.execute("""
+            SELECT id, name, image_path as image, background_path as background, header_path,
+                   favorite, total_playtime, last_play_time
+            FROM games WHERE id = ?
+        """, (game_id,)).fetchone()
+        conn.close()
+        return self._game_from_row(row)
 
     def get_filtered_games(self, search_text, tag=None, sort_by="Nome (A-Z)"):
-        games_to_filter = list(self.games)
-
+        conn = get_db_connection()
+        query = """
+            SELECT id, name, image_path as image, background_path as background, header_path,
+                   favorite, total_playtime, last_play_time
+            FROM games
+        """
+        params = []
         if search_text:
-            search_text_lower = search_text.lower()
-            games_to_filter = [
-                game for game in games_to_filter 
-                if search_text_lower in game["name"].lower() 
-                or any(search_text_lower in d["display_name"].lower() for d in game.get("paths", []))
-            ]
+            query += " WHERE name LIKE ?"
+            params.append(f"%{search_text}%")
         
-        if tag and tag != "Todas":
-            games_to_filter = [game for game in games_to_filter if tag in game.get("tags", [])]
-            
         if sort_by == "Nome (A-Z)":
-            games_to_filter.sort(key=lambda g: g['name'].lower())
+            query += " ORDER BY name COLLATE NOCASE ASC"
         elif sort_by == "Mais Jogado":
-            games_to_filter.sort(key=lambda g: g.get('total_playtime', 0), reverse=True)
+            query += " ORDER BY total_playtime DESC"
         elif sort_by == "Jogado Recentemente":
-            for g in games_to_filter:
-                if isinstance(g.get("recent_play_time"), str):
-                    try: g["recent_play_time"] = datetime.fromisoformat(g["recent_play_time"])
-                    except: g["recent_play_time"] = None
-            games_to_filter.sort(key=lambda g: g.get('recent_play_time') or datetime.min, reverse=True)
+            query += " ORDER BY last_play_time DESC"
             
-        return games_to_filter
-        
+        rows = conn.execute(query, params).fetchall()
+        conn.close()
+        return [self._game_from_row(row) for row in rows]
+
     def get_all_unique_tags(self):
-        all_tags = set()
-        for game in self.games:
-            for tag in game.get("tags", []):
-                all_tags.add(tag)
-        return sorted(list(all_tags))
+        """Busca todas as tags únicas existentes no banco de dados."""
+        conn = get_db_connection()
+        rows = conn.execute("SELECT name FROM tags ORDER BY name COLLATE NOCASE ASC").fetchall()
+        conn.close()
+        return [row['name'] for row in rows]
+
+    def get_favorite_games(self):
+        conn = get_db_connection()
+        rows = conn.execute("""
+            SELECT id, name, image_path as image, background_path as background, header_path,
+                   favorite, total_playtime, last_play_time
+            FROM games WHERE favorite = 1 ORDER BY name COLLATE NOCASE ASC
+        """).fetchall()
+        conn.close()
+        return [self._game_from_row(row) for row in rows]
+        
+    def get_recent_games(self):
+        conn = get_db_connection()
+        rows = conn.execute("""
+            SELECT id, name, image_path as image, background_path as background, header_path,
+                   favorite, total_playtime, last_play_time
+            FROM games WHERE last_play_time IS NOT NULL ORDER BY last_play_time DESC
+        """).fetchall()
+        conn.close()
+        return [self._game_from_row(row) for row in rows]
+
+    def toggle_favorite(self, game):
+        game_id = game['id']
+        # Converte o valor booleano para 0 ou 1
+        new_fav_status = 1 if not game.get('favorite', False) else 0
+        
+        conn = get_db_connection()
+        conn.execute("UPDATE games SET favorite = ? WHERE id = ?", (new_fav_status, game_id))
+        conn.commit()
+        conn.close()
+
+    def add_playtime(self, game_to_update, seconds_played):
+        game_id = game_to_update['id']
+        # Garante que o playtime atual é um número
+        current_playtime = game_to_update.get('total_playtime', 0) or 0
+        new_total_playtime = current_playtime + seconds_played
+
+        conn = get_db_connection()
+        conn.execute("UPDATE games SET total_playtime = ? WHERE id = ?", (new_total_playtime, game_id))
+        conn.commit()
+        conn.close()
+        logging.info(f"Adicionado {seconds_played}s para {game_to_update['name']}. Total: {new_total_playtime}s")
+
+    def record_recent_play(self, game):
+        game_id = game['id']
+        now_iso = datetime.now().isoformat()
+        
+        conn = get_db_connection()
+        conn.execute("UPDATE games SET last_play_time = ? WHERE id = ?", (now_iso, game_id))
+        conn.commit()
+        conn.close()
+
+    def get_all_executable_paths(self):
+        """Retorna um set com todos os caminhos de executáveis já existentes no DB,
+           TODOS NORMALIZADOS para comparação case-insensitive."""
+        conn = get_db_connection()
+        rows = conn.execute("SELECT path FROM executables").fetchall()
+        conn.close()
+        return {os.path.normcase(row['path']) for row in rows}
