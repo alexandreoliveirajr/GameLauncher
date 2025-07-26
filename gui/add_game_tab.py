@@ -1,12 +1,11 @@
 # gui/add_game_tab.py
 
 import os
-from PyQt5.QtWidgets import (
+from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QPushButton, QFileDialog, QFormLayout, QGroupBox, QInputDialog
 )
-from PyQt5.QtCore import Qt
-from core.theme import current_theme
+from PyQt6.QtCore import Qt
 
 class AddGameTab(QWidget):
     def __init__(self, game_manager, main_window_ref):
@@ -20,55 +19,45 @@ class AddGameTab(QWidget):
     def _setup_ui(self):
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(50, 50, 50, 50)
-        main_layout.setAlignment(Qt.AlignCenter)
+        main_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title_label = QLabel("Adicionar Novo Jogo")
-        title_label.setStyleSheet(f"font-size: 24px; font-weight: bold; margin-bottom: 20px; color: {current_theme['text_primary'].name()};")
-        title_label.setAlignment(Qt.AlignCenter)
+        
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         main_layout.addWidget(title_label)
         form_layout = QFormLayout()
-        form_layout.setRowWrapPolicy(QFormLayout.WrapAllRows)
-        form_layout.setFieldGrowthPolicy(QFormLayout.ExpandingFieldsGrow)
-        form_layout.setLabelAlignment(Qt.AlignRight)
-        input_style = f"background-color: {current_theme['input_background'].name()}; color: {current_theme['text_primary'].name()}; border: 1px solid {current_theme['input_border'].name()}; border-radius: 5px; padding: 8px;"
+        form_layout.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapAllRows)
+        form_layout.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+        form_layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
         self.name_input = QLineEdit()
         self.name_input.setPlaceholderText("Nome do jogo (obrigatório)")
-        self.name_input.setStyleSheet(input_style)
+       
         form_layout.addRow("Nome:", self.name_input)
         self.tags_input = QLineEdit()
         self.tags_input.setPlaceholderText("RPG, Indie, Ação... (separadas por vírgula)")
-        self.tags_input.setStyleSheet(input_style)
+        
         form_layout.addRow("Tags (Opcional):", self.tags_input)
         paths_group_box = QGroupBox("Caminhos dos Executáveis")
-        paths_group_box.setStyleSheet(f"color: {current_theme['text_primary'].name()};")
         self.paths_layout = QVBoxLayout()
         paths_group_box.setLayout(self.paths_layout)
         form_layout.addRow(paths_group_box)
-        btn_style = f"background-color: {current_theme['input_border'].name()}; color: {current_theme['text_primary'].name()}; border-radius: 5px; padding: 8px;"
         add_path_button = QPushButton("Adicionar Executável")
-        add_path_button.setStyleSheet(btn_style)
         add_path_button.clicked.connect(self._add_executable_path)
         form_layout.addRow(add_path_button)
         remove_path_button = QPushButton("Remover Executável Selecionado")
-        remove_path_button.setStyleSheet(btn_style)
         remove_path_button.clicked.connect(self._remove_executable_path)
         form_layout.addRow(remove_path_button)
         self.image_path_label = QLabel("Nenhuma imagem selecionada")
-        self.image_path_label.setStyleSheet(f"color: {current_theme['text_secondary'].name()}; font-style: italic;")
         image_button = QPushButton("Selecionar Imagem de Capa")
-        image_button.setStyleSheet(btn_style)
         image_button.clicked.connect(lambda: self._select_file_dialog(self.image_path_label, "image"))
         form_layout.addRow(image_button)
         self.background_path_label = QLabel("Nenhum fundo selecionado")
-        self.background_path_label.setStyleSheet(f"color: {current_theme['text_secondary'].name()}; font-style: italic;")
         background_button = QPushButton("Selecionar Imagem de Fundo")
-        background_button.setStyleSheet(btn_style)
         background_button.clicked.connect(lambda: self._select_file_dialog(self.background_path_label, "background"))
         form_layout.addRow(background_button)
         main_layout.addLayout(form_layout)
         add_game_button = QPushButton("Adicionar Jogo à Biblioteca")
-        add_game_button.setStyleSheet(f"background-color: {current_theme['accent_success_bright'].name()}; color: {current_theme['text_inverted'].name()}; font-weight: bold; border-radius: 8px; padding: 12px; margin-top: 20px;")
         add_game_button.clicked.connect(self._add_game)
-        main_layout.addWidget(add_game_button, alignment=Qt.AlignCenter)
+        main_layout.addWidget(add_game_button, alignment=Qt.AlignmentFlag.AlignCenter)
         main_layout.addStretch()
         self.setLayout(main_layout)
         self._refresh_paths_display()
@@ -127,16 +116,16 @@ class AddGameTab(QWidget):
         if self.current_paths:
             for d in self.current_paths:
                 lbl = QLabel(f"• {d['display_name']} — {os.path.basename(d['path'])}")
-                lbl.setStyleSheet(f"color: {current_theme['text_primary'].name()};"); lbl.setWordWrap(True); self.paths_layout.addWidget(lbl)
+
         else:
-            lbl = QLabel("(Nenhum executável adicionado)"); lbl.setStyleSheet(f"color: {current_theme['text_placeholder'].name()}; font-style: italic;"); self.paths_layout.addWidget(lbl)
+            lbl = QLabel("(Nenhum executável adicionado)"); 
 
     def _select_file_dialog(self, label_widget, file_type):
         filter_str = "Images (*.png *.jpg *.jpeg *.bmp *.webp);;All Files (*)"; file_path, _ = QFileDialog.getOpenFileName(self, f"Selecionar {file_type.replace('_', ' ')}", "", filter_str)
         if file_path:
             if file_type == "image": self.image_path = file_path
             elif file_type == "background": self.background_path = file_path
-            label_widget.setText(os.path.basename(file_path)); label_widget.setStyleSheet(f"color: {current_theme['text_primary'].name()};")
+            label_widget.setText(os.path.basename(file_path)); 
 
     # --- MÉTODO CORRIGIDO ---
     def _add_game(self):
@@ -159,8 +148,8 @@ class AddGameTab(QWidget):
             # Limpa o formulário
             self.name_input.clear(); self.tags_input.clear(); self.current_paths = []
             self._refresh_paths_display()
-            self.image_path_label.setText("Nenhuma imagem selecionada"); self.image_path_label.setStyleSheet(f"color: {current_theme['text_secondary'].name()}; font-style: italic;")
-            self.background_path_label.setText("Nenhum fundo selecionado"); self.background_path_label.setStyleSheet(f"color: {current_theme['text_secondary'].name()}; font-style: italic;")
+            self.image_path_label.setText("Nenhuma imagem selecionada"); 
+            self.background_path_label.setText("Nenhum fundo selecionado"); 
             if hasattr(self, 'image_path'): delattr(self, 'image_path')
             if hasattr(self, 'background_path'): delattr(self, 'background_path')
         else:

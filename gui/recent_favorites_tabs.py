@@ -1,20 +1,16 @@
 # game_launcher/gui/recent_favorites_tabs.py
 
-from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QGridLayout, QLabel, QScrollArea, QSizePolicy,
-    QSpacerItem, QHBoxLayout, QPushButton, QMenu, QAction, QActionGroup
+from PyQt6.QtWidgets import (
+    QWidget, QVBoxLayout, QScrollArea, QGridLayout, QLabel,
+    QSizePolicy, QSpacerItem, QHBoxLayout, QPushButton, QMenu,
+    QStackedLayout # QActionGroup foi removido daqui
 )
-from PyQt5.QtCore import Qt, QPoint, QSize
+from PyQt6.QtGui import QAction, QActionGroup, QIcon # E adicionado aqui
+from PyQt6.QtCore import Qt, QPoint, QSize
 from datetime import datetime
-from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QGridLayout, QLabel, QScrollArea, QSizePolicy,
-    QSpacerItem, QHBoxLayout, QPushButton, QMenu, QAction, QActionGroup,
-    QStackedLayout
-)
 from gui.game_details_dialog import GameDetailsDialog
 from gui.animated_card import AnimatedGameCard 
 from gui.list_item_widget import GameListItemWidget
-from core.theme import current_theme
 
 
 class FavoritesTab(QWidget):
@@ -39,13 +35,6 @@ class FavoritesTab(QWidget):
 
         self.options_btn = QPushButton("⚙️")
         self.options_btn.setFixedSize(40, 40)
-        self.options_btn.setStyleSheet("""
-            QPushButton { 
-                border-radius: 20px; background-color: #2a2a2a; 
-                font-size: 22px; color: white;
-            } 
-            QPushButton:hover { background-color: #3a3a3a; }
-        """)
         self.options_btn.clicked.connect(self.show_options_menu)
         self.options_btn.setToolTip("Exibir opções de visualização e ordenação")
         toolbar.addWidget(self.options_btn)
@@ -63,7 +52,7 @@ class FavoritesTab(QWidget):
         self.list_container = self.list_scroll_area.widget()
         self.list_layout = QVBoxLayout(self.list_container)
         self.list_layout.setSpacing(10)
-        self.list_layout.setAlignment(Qt.AlignTop)
+        self.list_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.stacked_layout.addWidget(self.list_scroll_area)
 
         main_layout.addLayout(self.stacked_layout)
@@ -104,7 +93,7 @@ class FavoritesTab(QWidget):
         view_group.addAction(list_action)
         menu.addAction(list_action)
 
-        menu.exec_(self.options_btn.mapToGlobal(QPoint(0, self.options_btn.height())))
+        menu.exec(self.options_btn.mapToGlobal(QPoint(0, self.options_btn.height())))
 
     def set_sort_option(self, sort_by):
         self.current_sort = sort_by
@@ -117,7 +106,6 @@ class FavoritesTab(QWidget):
     def _create_scroll_area(self):
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
-        scroll_area.setStyleSheet("background-color: transparent; border: none;")
         container = QWidget()
         scroll_area.setWidget(container)
         return scroll_area
@@ -131,18 +119,18 @@ class FavoritesTab(QWidget):
     def _populate_grid_view(self, games_list, columns=6):
         self._clear_layout(self.grid_layout)
         if not games_list:
-            no_games_label = QLabel("Nenhum jogo favorito."); no_games_label.setStyleSheet("font-size: 18px; color: #aaa;"); no_games_label.setAlignment(Qt.AlignCenter)
+            no_games_label = QLabel("Nenhum jogo favorito."); no_games_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.grid_layout.addWidget(no_games_label, 0, 0, 1, columns)
             return
         for idx, game in enumerate(games_list):
             card = AnimatedGameCard(game, card_size=(200, 220)); card.clicked.connect(lambda checked=False, g=game: self._show_game_details(g))
             row, col = idx // columns, idx % columns; self.grid_layout.addWidget(card, row, col)
-        self.grid_layout.addItem(QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding), (len(games_list) -1) // columns + 1, 0)
+        self.grid_layout.addItem(QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding), (len(games_list) -1) // columns + 1, 0)
 
     def _populate_list_view(self, games_list):
         self._clear_layout(self.list_layout)
         if not games_list:
-            no_games_label = QLabel("Nenhum jogo favorito."); no_games_label.setStyleSheet("font-size: 18px; color: #aaa;"); no_games_label.setAlignment(Qt.AlignCenter)
+            no_games_label = QLabel("Nenhum jogo favorito."); no_games_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.list_layout.addWidget(no_games_label)
             return
         for game in games_list:
@@ -152,7 +140,7 @@ class FavoritesTab(QWidget):
 
     def _show_game_details(self, game):
         dialog = GameDetailsDialog(game, self.game_manager, self.game_launcher, self.main_window_ref)
-        dialog.exec_()
+        dialog.exec()
         
     def _launch_game_from_list(self, game):
         paths = game.get("paths", [])
@@ -187,7 +175,6 @@ class RecentTab(QWidget):
             hbox.setContentsMargins(5, 2, 5, 2)
             hbox.setSpacing(15)
             name_label = QLabel(game["name"])
-            name_label.setStyleSheet(f"color: {current_theme['text_primary'].name()}; font-weight: bold;")
             name_label.setFixedWidth(220)
             hbox.addWidget(name_label)
             play_time_obj = game.get("recent_play_time")
@@ -198,17 +185,11 @@ class RecentTab(QWidget):
                 except Exception as e: 
                     dt_str = "Data inválida"
             date_label = QLabel(dt_str)
-            date_label.setStyleSheet(f"color: {current_theme['text_secondary'].name()};")
             date_label.setFixedWidth(140)
             hbox.addWidget(date_label)
-            spacer = QSpacerItem(20, 10, QSizePolicy.Expanding, QSizePolicy.Minimum)
+            spacer = QSpacerItem(20, 10, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
             hbox.addItem(spacer)
             play_btn = QPushButton("Detalhes")
-            play_btn.setStyleSheet(f"""
-                background-color: {current_theme['button_neutral'].name()}; 
-                color: {current_theme['text_primary'].name()}; 
-                padding: 5px 15px;
-            """)
             play_btn.clicked.connect(lambda _, g=game: self._show_game_details(g))
             hbox.addWidget(play_btn)
             container = QWidget()
@@ -219,9 +200,8 @@ class RecentTab(QWidget):
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setWidget(recent_games_container)
-        scroll_area.setStyleSheet("border: none; background-color: transparent;")
         self.recent_layout.addWidget(scroll_area)
 
     def _show_game_details(self, game):
         dialog = GameDetailsDialog(game, self.game_manager, self.game_launcher, self.main_window_ref)
-        dialog.exec_()
+        dialog.exec()

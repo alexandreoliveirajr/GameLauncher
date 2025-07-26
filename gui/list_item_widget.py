@@ -2,10 +2,9 @@
 
 import os
 # Importações completas, incluindo as de animação e efeitos
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QGraphicsDropShadowEffect
-from PyQt5.QtGui import QPixmap, QPainter, QColor, QBrush, QPen
-from PyQt5.QtCore import Qt, pyqtSignal, QPropertyAnimation, QEasingCurve, QRect
-from core.theme import current_theme
+from PyQt6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QGraphicsDropShadowEffect
+from PyQt6.QtGui import QPixmap, QPainter, QColor, QBrush, QPen
+from PyQt6.QtCore import Qt, pyqtSignal, QPropertyAnimation, QEasingCurve, QRect
 
 class GameListItemWidget(QWidget):
     details_clicked = pyqtSignal()
@@ -13,6 +12,7 @@ class GameListItemWidget(QWidget):
 
     def __init__(self, game, parent=None):
         super().__init__(parent)
+        self.setObjectName("GameListItem")
         self.game = game
         self.setMinimumHeight(100)
         self.setMaximumHeight(100)
@@ -31,30 +31,26 @@ class GameListItemWidget(QWidget):
 
         image_label = QLabel()
         image_label.setFixedSize(140, 80)
-        image_label.setStyleSheet("background-color: #1e1e1e; border-radius: 4px;")
-        image_label.setAlignment(Qt.AlignCenter)
+        image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         image_to_display = self.game.get("header_path") or self.game.get("image")
         
         if image_to_display and os.path.exists(image_to_display):
             pixmap = QPixmap(image_to_display)
-            scaled_pixmap = pixmap.scaled(image_label.size(), Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation)
+            scaled_pixmap = pixmap.scaled(image_label.size(), Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation)
             image_label.setPixmap(scaled_pixmap)
         else:
             image_label.setText("Sem Arte")
-            image_label.setStyleSheet(f"background-color: {current_theme['background_darker'].name()}; border-radius: 4px; color: {current_theme['text_placeholder'].name()};")
-        
+            
         main_layout.addWidget(image_label)
 
         info_layout = QVBoxLayout()
         info_layout.setContentsMargins(0, 5, 0, 5)
         name_label = QLabel(self.game["name"])
-        name_label.setStyleSheet("font-size: 18px; font-weight: bold; color: white; background: transparent;")
         
         playtime_seconds = self.game.get("total_playtime", 0)
         playtime_hours = playtime_seconds / 3600
         playtime_label = QLabel(f"{playtime_hours:.1f} horas jogadas")
-        playtime_label.setStyleSheet("font-size: 13px; color: #ccc; background: transparent;")
         
         info_layout.addWidget(name_label)
         info_layout.addWidget(playtime_label)
@@ -63,10 +59,6 @@ class GameListItemWidget(QWidget):
 
         self.play_btn = QPushButton("▶ Jogar")
         self.play_btn.setFixedSize(100, 40)
-        self.play_btn.setStyleSheet("""
-            QPushButton { background-color: #2c9a48; color: white; font-size: 14px; font-weight: bold; border-radius: 5px; } 
-            QPushButton:hover { background-color: #36b558; }
-        """)
         self.play_btn.clicked.connect(self.play_clicked.emit)
         main_layout.addWidget(self.play_btn)
     
@@ -83,29 +75,15 @@ class GameListItemWidget(QWidget):
         # Animação de Entrada (Inflar)
         self.enter_animation = QPropertyAnimation(self, b"geometry")
         self.enter_animation.setDuration(150)
-        self.enter_animation.setEasingCurve(QEasingCurve.OutQuad)
+        self.enter_animation.setEasingCurve(QEasingCurve.Type.OutQuad)
 
         # Animação de Saída (Desinflar)
         self.leave_animation = QPropertyAnimation(self, b"geometry")
         self.leave_animation.setDuration(150)
-        self.leave_animation.setEasingCurve(QEasingCurve.OutQuad)
-
-    # O paintEvent continua o mesmo, cuidando do fundo e da borda
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
-        backgroundColor = current_theme["card"]
-        borderColor = current_theme["accent"] if self.is_hovered else current_theme["card_border"]
-        painter.setPen(QPen(borderColor, 1))
-        painter.setBrush(QBrush(backgroundColor))
-        painter.drawRoundedRect(self.rect().adjusted(0, 0, -1, -1), 8, 8)
+        self.leave_animation.setEasingCurve(QEasingCurve.Type.OutQuad)
 
     # --- EVENTOS DE MOUSE ATUALIZADOS COM ANIMAÇÃO ---
     def enterEvent(self, event):
-        self.is_hovered = True
-        self.update() # Força redesenho da borda
-        
-        # Armazena a geometria original e define a animação de inflar
         self.original_geometry = self.geometry()
         end_geo = self.original_geometry.adjusted(-2, -2, 4, 4) # Infla em 2px para cada lado
         
@@ -118,9 +96,6 @@ class GameListItemWidget(QWidget):
         super().enterEvent(event)
 
     def leaveEvent(self, event):
-        self.is_hovered = False
-        self.update() # Força redesenho da borda
-        
         # Inicia a animação para retornar ao tamanho original
         self.enter_animation.stop()
         self.leave_animation.setStartValue(self.geometry())
@@ -132,7 +107,7 @@ class GameListItemWidget(QWidget):
     def mousePressEvent(self, event):
         try:
             if self.play_btn and not self.play_btn.geometry().contains(event.pos()):
-                if event.button() == Qt.LeftButton:
+                if event.button() == Qt.MouseButton.LeftButton:
                     self.details_clicked.emit()
             
             super().mousePressEvent(event)

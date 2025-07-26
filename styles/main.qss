@@ -1,0 +1,130 @@
+/* styles/main.qss (NOVA VERSÃO COM PLACEHOLDERS) */
+
+QMainWindow, QWidget {
+    background-color: {background};
+    color: {text-primary};
+    font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+/* Exemplo de como estilizaremos no futuro */
+#GameCardName {
+    font-weight: bold;
+    font-size: 12px;
+}
+
+#DetailsGameTitle {
+    font-size: 34px;
+    font-weight: bold;
+    color: {text-primary};
+    background-color: transparent; /* Importante para sobrepor o fundo */
+}
+
+#DetailsGamePlaytime {
+    font-size: 18px;
+    font-weight: bold;
+    color: {text-secondary};
+    margin-top: 10px;
+    margin-bottom: 10px;
+    background-color: transparent;
+}
+
+#LeftSidebar {
+    background-color: #2C2D30; /* Cor um pouco mais clara para diferenciar */
+}
+
+#RightContentArea {
+    background-color: {background}; /* Usa a cor de fundo principal */
+}
+
+#LogoLabel {
+    color: {text-primary};
+    font-size: 24px;
+    font-weight: bold;
+    padding-bottom: 20px;
+}
+
+/* Estilo Básico para os botões da Sidebar */
+#LeftSidebar QPushButton {
+    background-color: transparent;
+    color: {text-secondary};
+    border: none;
+    padding: 12px 15px; /* Aumenta o padding lateral */
+    font-size: 14px;
+    text-align: left;
+    border-radius: 8px; /* Bordas mais arredondadas */
+    font-weight: bold; /* Fonte em negrito */
+}
+
+#LeftSidebar QPushButton:hover {
+    background-color: #3A3B3E;
+    color: {text-primary};
+}
+
+/* Estilo para o botão que está "ativo" (precisaremos de lógica para isso) */
+#LeftSidebar QPushButton:checked {
+    background-color: #4C566A; /* Um azul/cinza escuro */
+}
+
+/* --- BOTÃO DE OPÇÕES DE EXIBIÇÃO --- */
+#ViewOptionsButton {
+    background-color: #2C2D30;
+    border: 1px solid #3A3B3E;
+    border-radius: 8px;
+}
+#ViewOptionsButton:hover {
+    background-color: #3A3B3E;
+}
+
+/* --- ESTILO DOS CARDS DE JOGO --- */
+#GameCard { /* O AnimatedGameCard em si */
+    background-color: transparent;
+    border: none;
+    color: {text-secondary};
+}
+
+#GameCard:hover {
+    color: {text-primary};
+}
+
+/* A imagem dentro do card */
+#GameCardImage {
+    border-radius: 12px;
+}
+
+/* O nome do jogo abaixo da imagem */
+#GameCardName {
+    font-weight: bold;
+    font-size: 14px;
+    margin-top: 5px;
+}
+
+/* --- ESTILO DOS ITENS DA LISTA DE JOGOS --- */
+#GameListItem {
+    background-color: {card};
+    border: 1px solid {card-border};
+    border-radius: 8px;
+}
+
+/* Efeito ao passar o mouse */
+#GameListItem:hover {
+    border: 1px solid {accent};
+}
+
+/* Estilo dos textos dentro do item */
+#GameListItem QLabel {
+    background-color: transparent; /* Garante que não tenham fundo próprio */
+    border: none;
+}
+
+/* Estilo do botão "Jogar" dentro do item */
+#GameListItem QPushButton {
+    background-color: {accent-success};
+    color: {text-primary};
+    font-size: 14px;
+    font-weight: bold;
+    border-radius: 5px;
+    padding: 8px 15px;
+}
+#GameListItem QPushButton:hover {
+    background-color: {accent-success-hover};
+}

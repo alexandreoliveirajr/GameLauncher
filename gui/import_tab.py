@@ -1,22 +1,20 @@
 # gui/import_tab.py
 
 import os
-from PyQt5.QtWidgets import (
+from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QFileDialog,
     QListWidget, QListWidgetItem, QCheckBox, QLabel, QMessageBox, QFrame, QApplication
 )
-from PyQt5.QtCore import Qt
+from PyQt6.QtCore import Qt
 
 from core.folder_scanner import FolderScanner
 from core.settings_manager import SettingsManager
 from core import steam_api
-from core.theme import current_theme
 
 class ImportTab(QWidget):
     def __init__(self, game_manager, main_window_ref):
         super().__init__()
         self.setAutoFillBackground(True)
-        self.setStyleSheet(f"background-color: {current_theme['background'].name()};")
         self.game_manager = game_manager
         self.main_window_ref = main_window_ref
         self.folder_scanner = FolderScanner(self.game_manager)
@@ -28,11 +26,8 @@ class ImportTab(QWidget):
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(20, 20, 20, 20)
         main_layout.setSpacing(15)
-
-        label_style = f"font-size: 16px; font-weight: bold; color: {current_theme['text_primary'].name()};"
         
         steam_tools_label = QLabel("Ferramentas da Steam")
-        steam_tools_label.setStyleSheet(label_style)
         main_layout.addWidget(steam_tools_label)
         
         update_app_list_btn = QPushButton("Baixar/Atualizar Lista de Apps da Steam")
@@ -40,7 +35,6 @@ class ImportTab(QWidget):
         main_layout.addWidget(update_app_list_btn)
 
         auto_scan_label = QLabel("Buscas por Launcher")
-        auto_scan_label.setStyleSheet(f"{label_style} margin-top: 10px;")
         main_layout.addWidget(auto_scan_label)
         
         auto_scan_layout = QHBoxLayout()
@@ -53,7 +47,6 @@ class ImportTab(QWidget):
         main_layout.addLayout(auto_scan_layout)
 
         manual_scan_label = QLabel("Busca Manual")
-        manual_scan_label.setStyleSheet(f"{label_style} margin-top: 10px;")
         main_layout.addWidget(manual_scan_label)
         
         manual_buttons_layout = QHBoxLayout()
@@ -67,16 +60,14 @@ class ImportTab(QWidget):
         
         # --- SEÇÃO CORRIGIDA ---
         line = QFrame()
-        line.setFrameShape(QFrame.HLine)
-        line.setFrameShadow(QFrame.Sunken)
+        line.setFrameShape(QFrame.Shape.HLine)
+        line.setFrameShadow(QFrame.Shadow.Sunken)
         main_layout.addWidget(line)
 
         results_label = QLabel("Resultados da Varredura:")
-        results_label.setStyleSheet(f"font-size: 14px; font-weight: bold; color: {current_theme['text_primary'].name()};")
         main_layout.addWidget(results_label)
 
         self.results_list = QListWidget()
-        self.results_list.setStyleSheet(f"font-size: 14px; color: {current_theme['text_primary'].name()};")
         main_layout.addWidget(self.results_list)
 
         action_layout = QHBoxLayout()
@@ -90,11 +81,6 @@ class ImportTab(QWidget):
         action_layout.addStretch()
 
         import_btn = QPushButton("✅ Adicionar Selecionados")
-        import_btn.setStyleSheet(f"""
-            background-color: {current_theme['accent_success_bright'].name()}; 
-            color: {current_theme['text_inverted'].name()}; 
-            font-weight: bold; padding: 10px;
-        """)
         import_btn.clicked.connect(self.import_selected_games)
         action_layout.addWidget(import_btn)
         
@@ -163,8 +149,7 @@ class ImportTab(QWidget):
     def _execute_scan(self, scan_method, path):
         self.results_list.clear()
         loading_label = QLabel("Varrendo... Por favor, aguarde.", self)
-        loading_label.setStyleSheet("background-color: rgba(0, 0, 0, 0.7); color: white; font-size: 18px;")
-        loading_label.setAlignment(Qt.AlignCenter)
+        loading_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         loading_label.setGeometry(self.rect()) # Cobre a aba inteira
         loading_label.show()
         QApplication.processEvents()

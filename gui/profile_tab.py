@@ -2,18 +2,17 @@
 
 import os
 from datetime import datetime
-from PyQt5.QtWidgets import (
+from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QDialog, 
     QScrollArea, QSpacerItem, QSizePolicy
 )
-from PyQt5.QtGui import QPainter, QColor, QBrush, QPixmap, QColor
-from PyQt5.QtCore import Qt, QPoint
+from PyQt6.QtGui import QPainter, QColor, QBrush, QPixmap, QColor
+from PyQt6.QtCore import Qt, QPoint
 
 from gui.edit_profile_dialog import EditProfileDialog
 from gui.profile_widgets import StatBox
 from gui.avatar_widget import AvatarWidget
 from gui.animated_card import AnimatedGameCard
-from core.theme import current_theme
 
 class ProfileTab(QWidget):
     # (O __init__, paintEvent, e _setup_ui continuam os mesmos)
@@ -30,7 +29,7 @@ class ProfileTab(QWidget):
         painter = QPainter(self)
         if self.background_pixmap:
             target_rect = self.rect()
-            scaled_pixmap = self.background_pixmap.scaled(target_rect.size(), Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation)
+            scaled_pixmap = self.background_pixmap.scaled(target_rect.size(), Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation)
             point = QPoint((target_rect.width() - scaled_pixmap.width()) // 2, (target_rect.height() - scaled_pixmap.height()) // 2)
             painter.drawPixmap(point, scaled_pixmap)
         else:
@@ -41,12 +40,6 @@ class ProfileTab(QWidget):
         self.main_layout.setContentsMargins(30, 30, 30, 20)
         self.main_layout.setSpacing(20)
         header_panel = QWidget()
-        panel_color = current_theme['panel_background']
-        r, g, b, a = panel_color.getRgb()
-        header_panel.setStyleSheet(f"""
-            background-color: rgba({r}, {g}, {b}, {a}); 
-            border-radius: 15px;
-        """)
         header_layout = QHBoxLayout(header_panel)
         header_layout.setContentsMargins(20, 20, 20, 20)
         self.avatar_widget = AvatarWidget(size=180)
@@ -54,27 +47,19 @@ class ProfileTab(QWidget):
         info_layout = QVBoxLayout()
         info_layout.setContentsMargins(20, 0, 0, 0)
         self.username_label = QLabel()
-        self.username_label.setStyleSheet("font-size: 32px; font-weight: bold; color: white; background: transparent;")
         self.bio_label = QLabel()
-        self.bio_label.setStyleSheet("font-size: 16px; color: #ccc; background: transparent;")
         self.bio_label.setWordWrap(True)
         info_layout.addWidget(self.username_label)
         info_layout.addWidget(self.bio_label)
         info_layout.addStretch()
         header_layout.addLayout(info_layout, 1)
         edit_button = QPushButton("✏️ Editar Perfil")
-        edit_button.setStyleSheet(f"""
-            padding: 10px 15px; font-size: 14px; border-radius: 8px; 
-            color: {current_theme['text_primary'].name()}; 
-            background-color: {current_theme['button_neutral'].name()};
-        """)
         edit_button.clicked.connect(self.edit_profile)
-        header_layout.addWidget(edit_button, alignment=Qt.AlignTop)
+        header_layout.addWidget(edit_button, alignment=Qt.AlignmentFlag.AlignTop)
         self.main_layout.addWidget(header_panel)
         self.main_layout.addStretch(1)
         showcase_title = QLabel("JOGOS EM DESTAQUE")
-        showcase_title.setStyleSheet("font-size: 14px; color: #ccc; font-weight: bold; background: transparent; padding-left: 5px;")
-        showcase_title.setAlignment(Qt.AlignCenter)
+        showcase_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.main_layout.addWidget(showcase_title)
         self.showcase_layout = QHBoxLayout()
         self.showcase_layout.setSpacing(20)
@@ -172,6 +157,6 @@ class ProfileTab(QWidget):
 
     def edit_profile(self):
         dialog = EditProfileDialog(self.profile_manager, self.game_manager, self)
-        if dialog.exec_() == QDialog.Accepted:
+        if dialog.exec() == QDialog.DialogCode.Accepted:
             print("Perfil salvo! Atualizando a exibição...")
             self.load_profile_data()

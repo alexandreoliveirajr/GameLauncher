@@ -1,11 +1,12 @@
 # gui/library_tab.py
 
-from PyQt5.QtWidgets import (
+from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QScrollArea, QGridLayout, QLabel,
-    QSizePolicy, QSpacerItem, QHBoxLayout, QPushButton, QMenu, QAction,
-    QActionGroup, QStackedLayout
+    QSizePolicy, QSpacerItem, QHBoxLayout, QPushButton, QMenu,
+    QStackedLayout # QActionGroup foi removido daqui
 )
-from PyQt5.QtCore import Qt, QPoint
+from PyQt6.QtGui import QAction, QActionGroup, QIcon # E adicionado aqui
+from PyQt6.QtCore import Qt, QPoint, QSize
 from gui.game_details_dialog import GameDetailsDialog
 from gui.animated_card import AnimatedGameCard
 from gui.list_item_widget import GameListItemWidget # Nosso card para a lista
@@ -32,21 +33,15 @@ class LibraryTab(QWidget):
         toolbar.setContentsMargins(0, 0, 0, 10)
         toolbar.addStretch()
 
-        self.options_btn = QPushButton("⚙️")
+        self.options_btn = QPushButton() # Deixe o texto vazio
+        self.options_btn.setIcon(QIcon("assets/icons/sliders.svg"))
+        self.options_btn.setIconSize(QSize(20, 20)) # Ajuste o tamanho do ícone
         self.options_btn.setFixedSize(40, 40)
-        self.options_btn.setStyleSheet("""
-            QPushButton { 
-                border-radius: 20px; background-color: #2a2a2a; 
-                font-size: 22px; color: white;
-            } 
-            QPushButton:hover { background-color: #3a3a3a; }
-        """)
         self.options_btn.clicked.connect(self.show_options_menu)
         self.options_btn.setToolTip("Exibir opções de visualização e ordenação")
         toolbar.addWidget(self.options_btn)
         main_layout.addLayout(toolbar)
 
-        # LÓGICA REFEITA: Usando QStackedLayout para alternar as views
         self.stacked_layout = QStackedLayout()
 
         # View de Grade
@@ -61,7 +56,7 @@ class LibraryTab(QWidget):
         self.list_container = self.list_scroll_area.widget()
         self.list_layout = QVBoxLayout(self.list_container)
         self.list_layout.setSpacing(10)
-        self.list_layout.setAlignment(Qt.AlignTop)
+        self.list_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.stacked_layout.addWidget(self.list_scroll_area)
 
         main_layout.addLayout(self.stacked_layout)
@@ -70,7 +65,6 @@ class LibraryTab(QWidget):
         """Função auxiliar para criar uma QScrollArea padronizada."""
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
-        scroll_area.setStyleSheet("background-color: transparent; border: none;")
         
         container = QWidget()
         scroll_area.setWidget(container)
@@ -96,8 +90,7 @@ class LibraryTab(QWidget):
         self._clear_layout(self.grid_layout)
         if not games_list:
             no_games_label = QLabel("Nenhum jogo encontrado.")
-            no_games_label.setStyleSheet("font-size: 18px; color: #aaa;")
-            no_games_label.setAlignment(Qt.AlignCenter)
+            no_games_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.grid_layout.addWidget(no_games_label, 0, 0, 1, columns)
             return
 
@@ -107,14 +100,13 @@ class LibraryTab(QWidget):
             row, col = idx // columns, idx % columns
             self.grid_layout.addWidget(card, row, col)
         
-        self.grid_layout.addItem(QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding), len(games_list) // columns + 1, 0)
+        self.grid_layout.addItem(QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding), len(games_list) // columns + 1, 0)
 
     def _populate_list_view(self, games_list):
         self._clear_layout(self.list_layout)
         if not games_list:
             no_games_label = QLabel("Nenhum jogo encontrado.")
-            no_games_label.setStyleSheet("font-size: 18px; color: #aaa;")
-            no_games_label.setAlignment(Qt.AlignCenter)
+            no_games_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.list_layout.addWidget(no_games_label)
             return
 
@@ -162,7 +154,7 @@ class LibraryTab(QWidget):
         list_action.triggered.connect(lambda: self.set_view_mode("Lista"))
         view_group.addAction(list_action); menu.addAction(list_action)
 
-        menu.exec_(self.options_btn.mapToGlobal(QPoint(0, self.options_btn.height())))
+        menu.exec(self.options_btn.mapToGlobal(QPoint(0, self.options_btn.height())))
 
     def set_sort_option(self, sort_by):
         self.current_sort = sort_by
@@ -178,7 +170,7 @@ class LibraryTab(QWidget):
 
     def _show_game_details(self, game):
         dialog = GameDetailsDialog(game, self.game_manager, self.game_launcher, self.main_window_ref)
-        dialog.exec_()
+        dialog.exec()
         
     def _launch_game_from_list(self, game):
         paths = game.get("paths", [])

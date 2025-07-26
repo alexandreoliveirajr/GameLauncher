@@ -1,12 +1,13 @@
 # gui/edit_profile_dialog.py
 
 import os
-from PyQt5.QtWidgets import (
+from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QFormLayout, QLineEdit, QTextEdit,
     QPushButton, QFileDialog, QHBoxLayout, QSpacerItem, QSizePolicy,
     QComboBox
 )
-from core.theme import current_theme
+
 
 class EditProfileDialog(QDialog):
     def __init__(self, profile_manager, game_manager, parent=None):
@@ -14,7 +15,7 @@ class EditProfileDialog(QDialog):
         # Pega as "flags" (configurações) atuais da janela
         flags = self.windowFlags()
         # Remove APENAS a flag do botão de ajuda, mantendo todas as outras
-        self.setWindowFlags(flags & ~Qt.WindowContextHelpButtonHint)
+        self.setWindowFlags(flags & ~Qt.WindowType.WindowContextHelpButtonHint)
         self.profile_manager = profile_manager
         self.game_manager = game_manager # Precisamos para listar os favoritos
         self.current_data = self.profile_manager.get_data().copy()
@@ -24,28 +25,6 @@ class EditProfileDialog(QDialog):
 
         self.setWindowTitle("Editar Perfil")
         self.setMinimumWidth(500)
-        self.setStyleSheet(f"""
-            QDialog {{ 
-                background-color: {current_theme['background'].name()}; 
-                color: {current_theme['text_primary'].name()}; 
-            }}
-            QLineEdit, QTextEdit, QComboBox {{ 
-                background-color: {current_theme['button_options'].name()}; 
-                border: 1px solid {current_theme['button_neutral'].name()}; 
-                border-radius: 5px; padding: 8px; 
-                color: {current_theme['text_primary'].name()};
-            }}
-            QPushButton {{ 
-                padding: 10px 15px; font-size: 14px; border-radius: 8px;
-                background-color: {current_theme['button_neutral'].name()};
-            }}
-            QPushButton#saveButton {{
-                background-color: {current_theme['accent_success_bright'].name()}; 
-                color: {current_theme['text_inverted'].name()}; 
-                font-weight: bold;
-            }}
-        """)
-
         self._setup_ui()
 
     def _setup_ui(self):
@@ -77,7 +56,7 @@ class EditProfileDialog(QDialog):
         main_layout.addLayout(form_layout)
 
         button_layout = QHBoxLayout()
-        button_layout.addSpacerItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
+        button_layout.addSpacerItem(QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum))
         cancel_button = QPushButton("Cancelar"); cancel_button.clicked.connect(self.reject)
         button_layout.addWidget(cancel_button)
         save_button = QPushButton("Salvar Alterações"); save_button.setObjectName("saveButton"); save_button.clicked.connect(self._save_changes)

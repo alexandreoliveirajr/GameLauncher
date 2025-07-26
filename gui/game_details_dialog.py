@@ -3,17 +3,14 @@
 import os
 import logging
 from datetime import datetime
-from PyQt5.QtWidgets import (
+from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QMessageBox, QComboBox, QLineEdit, QFormLayout, QGroupBox,
     QInputDialog, QFileDialog, QWidget,
     QSpacerItem, QSizePolicy
 )
-from PyQt5.QtGui import QPixmap, QPainter, QBrush, QColor
-from PyQt5.QtCore import Qt, QPoint
-
-# Suas importações personalizadas
-from core.theme import current_theme
+from PyQt6.QtGui import QPixmap, QPainter, QBrush, QColor
+from PyQt6.QtCore import Qt, QPoint
 from core import steam_api
 
 
@@ -23,7 +20,7 @@ class GameDetailsDialog(QDialog):
         # Pega as "flags" (configurações) atuais da janela
         flags = self.windowFlags()
         # Remove APENAS a flag do botão de ajuda, mantendo todas as outras
-        self.setWindowFlags(flags & ~Qt.WindowContextHelpButtonHint)
+        self.setWindowFlags(flags & ~Qt.WindowType.WindowContextHelpButtonHint)
         self.game = game
         self.game_manager = game_manager
         self.game_launcher = game_launcher
@@ -44,10 +41,12 @@ class GameDetailsDialog(QDialog):
 
     def paintEvent(self, event):
         painter = QPainter(self)
-        if self.background_pixmap:
+        
+        # Checa se o pixmap existe E não é nulo/vazio (mais seguro)
+        if self.background_pixmap and not self.background_pixmap.isNull():
             target_rect = self.rect()
             scaled_pixmap = self.background_pixmap.scaled(
-                target_rect.size(), Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation
+                target_rect.size(), Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation
             )
             point = QPoint(
                 (target_rect.width() - scaled_pixmap.width()) // 2,
@@ -55,16 +54,15 @@ class GameDetailsDialog(QDialog):
             )
             painter.drawPixmap(point, scaled_pixmap)
         else:
-            painter.fillRect(self.rect(), QBrush(QColor(current_theme['background'])))
+            # Se não houver imagem, pinta um fundo sólido para garantir que não quebre.
+            # Usamos uma cor fixa aqui, que corresponde ao nosso tema.
+            painter.fillRect(self.rect(), QBrush(QColor("#1e1e1e")))
 
     def _setup_ui(self):
         self.main_layout = QVBoxLayout(self)
-        self.main_layout.setContentsMargins(0,0,0,0)
+        self.main_layout.setContentsMargins(30,20,30,20)
         
         overlay_panel = QWidget()
-        overlay_color = current_theme['overlay_background']
-        r, g, b, a = overlay_color.getRgb()
-        overlay_panel.setStyleSheet(f"background-color: rgba({r}, {g}, {b}, {a});")
         self.main_layout.addWidget(overlay_panel)
 
         panel_layout = QHBoxLayout(overlay_panel)
@@ -73,35 +71,36 @@ class GameDetailsDialog(QDialog):
 
         cover_label = QLabel()
         cover_label.setFixedSize(250, 375)
-        cover_label.setStyleSheet("border-radius: 10px;")
         panel_layout.addWidget(cover_label)
 
         if self.game.get("image") and os.path.exists(self.game["image"]):
             pixmap = QPixmap(self.game["image"])
-            cover_label.setPixmap(pixmap.scaled(cover_label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation))
+            cover_label.setPixmap(pixmap.scaled(cover_label.size(), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
         else:
-            cover_label.setStyleSheet("background-color: #111; border-radius: 10px; color: #888; font-weight: bold;")
             cover_label.setText("Sem Capa")
-            cover_label.setAlignment(Qt.AlignCenter)
+            cover_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         right_column_layout = QVBoxLayout()
         panel_layout.addLayout(right_column_layout, 1)
 
         right_column_layout.addStretch(1)
-        name_label = QLabel(self.game["name"]); name_label.setStyleSheet("font-size: 34px; font-weight: bold; color: white;"); name_label.setWordWrap(True); name_label.setAlignment(Qt.AlignCenter)
+
+        name_label = QLabel(self.game["name"])
+        name_label.setObjectName("DetailsGameTitle") # Nome para o QSS
+        name_label.setWordWrap(True)
+        name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         right_column_layout.addWidget(name_label)
         
         total_seconds = self.game.get("total_playtime", 0)
         playtime_str = self._format_playtime(total_seconds)
-        playtime_label = QLabel(f"🕒 {playtime_str}"); playtime_label.setStyleSheet("font-size: 18px; font-weight: bold; color: #ccc; margin-top: 10px; margin-bottom: 10px;"); playtime_label.setAlignment(Qt.AlignCenter)
+        playtime_label = QLabel(f"🕒 {playtime_str}"); 
         right_column_layout.addWidget(playtime_label)
 
-        tags_layout = QHBoxLayout(); tags_layout.setAlignment(Qt.AlignCenter)
+        tags_layout = QHBoxLayout(); tags_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         tags = self.game.get("tags", [])
         if tags:
             for tag_text in tags:
                 tag_label = QLabel(tag_text)
-                tag_label.setStyleSheet(f"QLabel {{ background-color: {current_theme['accent'].name()}; color: white; padding: 4px 8px; border-radius: 8px; font-size: 12px; font-weight: bold; }}")
                 tags_layout.addWidget(tag_label)
         right_column_layout.addLayout(tags_layout)
 
@@ -109,14 +108,12 @@ class GameDetailsDialog(QDialog):
 
         paths = self.game.get("paths", [])
         if len(paths) > 1:
-            self.exec_combo = QComboBox()
-            self.exec_combo.setStyleSheet("QComboBox { background-color: #333; color: white; padding: 8px; border-radius: 5px; }")
+            self.execcombo = QComboBox()
             for d in paths:
-                self.exec_combo.addItem(d.get("display_name", os.path.basename(d["path"])), userData=d["path"])
-            right_column_layout.addWidget(self.exec_combo)
+                self.execcombo.addItem(d.get("display_name", os.path.basename(d["path"])), userData=d["path"])
+            right_column_layout.addWidget(self.execcombo)
 
         btn_play = QPushButton("▶ Jogar")
-        btn_play.setStyleSheet(f"padding: 12px; font-size: 16px; font-weight: bold; background-color: {current_theme['accent_success'].name()}; color: white; border-radius: 5px;")
         if len(paths) > 1:
             btn_play.clicked.connect(self._launch_selected_game)
         elif len(paths) == 1:
@@ -126,15 +123,14 @@ class GameDetailsDialog(QDialog):
         right_column_layout.addWidget(btn_play)
         
         action_buttons_layout = QHBoxLayout()
-        button_style = "QPushButton { background-color: #444; color: white; border-radius: 5px; padding: 8px; } QPushButton:hover { background-color: #555; }"
         
         is_favorite = self.game.get("favorite", False)
         fav_text = "⭐ Favorito" if is_favorite else "⭐ Favoritar"
-        btn_fav = QPushButton(fav_text); btn_fav.setStyleSheet(button_style); btn_fav.clicked.connect(self._toggle_favorite)
+        btn_fav = QPushButton(fav_text); btn_fav.clicked.connect(self._toggle_favorite)
         
-        btn_edit = QPushButton("✏️ Editar"); btn_edit.setStyleSheet(button_style); btn_edit.clicked.connect(self._edit_game_dialog)
+        btn_edit = QPushButton("✏️ Editar"); btn_edit.clicked.connect(self._edit_game_dialog)
         
-        btn_delete = QPushButton("🗑️ Excluir"); btn_delete.setStyleSheet(button_style); btn_delete.clicked.connect(self._delete_game)
+        btn_delete = QPushButton("🗑️ Excluir"); btn_delete.clicked.connect(self._delete_game)
 
         action_buttons_layout.addWidget(btn_fav); action_buttons_layout.addWidget(btn_edit); action_buttons_layout.addWidget(btn_delete)
         right_column_layout.addLayout(action_buttons_layout)
@@ -148,9 +144,8 @@ class GameDetailsDialog(QDialog):
         # Pega as flags atuais da janela de edição
         flags = edit_dialog.windowFlags()
         # Remove o botão de ajuda de contexto
-        edit_dialog.setWindowFlags(flags & ~Qt.WindowContextHelpButtonHint)
+        edit_dialog.setWindowFlags(flags & ~Qt.WindowType.WindowContextHelpButtonHint)
         edit_dialog.setWindowTitle(f"Editar {self.current_edited_game['name']}")
-        edit_dialog.setStyleSheet(f"background-color: {current_theme['background'].name()}; color: white;")
         edit_dialog.setMinimumWidth(400)
         
         edit_layout = QFormLayout()
@@ -163,7 +158,7 @@ class GameDetailsDialog(QDialog):
         self.tags_input.setPlaceholderText("RPG, Indie, Ação... (separadas por vírgula)")
         edit_layout.addRow("Tags:", self.tags_input)
 
-        paths_group_box = QGroupBox("Executáveis"); paths_group_box.setStyleSheet("color: white;")
+        paths_group_box = QGroupBox("Executáveis"); 
         self.paths_edit_layout = QVBoxLayout(); paths_group_box.setLayout(self.paths_edit_layout)
         edit_layout.addRow(paths_group_box); self._refresh_edit_paths_labels()
 
@@ -186,17 +181,15 @@ class GameDetailsDialog(QDialog):
         edit_layout.addRow(self.bg_btn)
         
         btn_search_steam = QPushButton("🔎 Buscar Arte da Steam por Nome")
-        btn_search_steam.setStyleSheet(f"background-color: {current_theme['accent'].name()}; color: white; padding: 8px;")
         btn_search_steam.clicked.connect(self._search_steam_artwork)
         edit_layout.addRow(btn_search_steam)
 
         btn_save = QPushButton("Salvar Alterações")
-        btn_save.setStyleSheet(f"background-color: {current_theme['accent_success_bright'].name()}; color: {current_theme['text_inverted'].name()}; font-weight: bold; padding: 8px;")
         btn_save.clicked.connect(lambda: self._save_edited_game(name_input.text(), edit_dialog))
         edit_layout.addRow(btn_save)
 
         edit_dialog.setLayout(edit_layout)
-        if edit_dialog.exec_():
+        if edit_dialog.exec():
             self.main_window_ref.refresh_views()
             self.accept()
 
@@ -243,7 +236,7 @@ class GameDetailsDialog(QDialog):
         return f"{int(minutes)}min"
 
     def _launch_selected_game(self):
-        self._launch_game(self.exec_combo.currentData())
+        self._launch_game(self.execcombo.currentData())
 
     def _launch_game(self, path):
         result, data = self.game_launcher.launch_game(self.game, path)
@@ -261,9 +254,9 @@ class GameDetailsDialog(QDialog):
             if widget: widget.setParent(None)
         if self.current_edited_game.get("paths"):
             for d in self.current_edited_game["paths"]:
-                lbl = QLabel(f"• {d.get('display_name', '')} — {os.path.basename(d['path'])}"); lbl.setStyleSheet("color: white;"); lbl.setWordWrap(True); self.paths_edit_layout.addWidget(lbl)
+                lbl = QLabel(f"• {d.get('display_name', '')} — {os.path.basename(d['path'])}"); lbl.setWordWrap(True); self.paths_edit_layout.addWidget(lbl)
         else:
-            lbl = QLabel("(Nenhum executável adicionado)"); lbl.setStyleSheet("color: #777; font-style: italic;"); self.paths_edit_layout.addWidget(lbl)
+            lbl = QLabel("(Nenhum executável adicionado)"); self.paths_edit_layout.addWidget(lbl)
 
     def _edit_add_path(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Selecionar executável")
@@ -305,6 +298,8 @@ class GameDetailsDialog(QDialog):
         dialog.accept()
 
     def _delete_game(self):
-        reply = self.main_window_ref.show_message_box("Confirmar exclusão", f"Tem certeza que deseja excluir '{self.game['name']}'?", "question", QMessageBox.Yes | QMessageBox.No)
-        if reply == QMessageBox.Yes:
-            self.game_manager.delete_game(self.game); self.main_window_ref.refresh_views(); self.accept()
+        reply = self.main_window_ref.show_message_box("Confirmar exclusão", f"Tem certeza que deseja excluir '{self.game['name']}'?", "question", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        if reply == QMessageBox.StandardButton.Yes: # <--- CORREÇÃO APLICADA AQUI
+            self.game_manager.delete_game(self.game)
+            self.main_window_ref.refresh_views()
+            self.accept()
