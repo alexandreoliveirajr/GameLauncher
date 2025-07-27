@@ -91,7 +91,7 @@ class AddGameTab(QWidget):
             game_name, _ = os.path.splitext(filename)
             self.name_input.setText(game_name)
 
-        display_name, ok = QInputDialog.getText(self, "Nome de Exibição", "Digite um nome para este executável:", QLineEdit.Normal, os.path.basename(file_path))
+        display_name, ok = QInputDialog.getText(self, "Nome de Exibição", "Digite um nome para este executável:", QLineEdit.EchoMode.Normal, os.path.basename(file_path))
         if ok and display_name.strip():
             self.current_paths.append({"path": file_path, "display_name": display_name.strip()})
             self._refresh_paths_display()

@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QDialog, 
-    QScrollArea, QSpacerItem, QSizePolicy
+    QScrollArea, QSpacerItem, QSizePolicy, QFrame
 )
 from PyQt6.QtGui import QPainter, QColor, QBrush, QPixmap, QColor
 from PyQt6.QtCore import Qt, QPoint
@@ -13,6 +13,40 @@ from gui.edit_profile_dialog import EditProfileDialog
 from gui.profile_widgets import StatBox
 from gui.avatar_widget import AvatarWidget
 from gui.animated_card import AnimatedGameCard
+
+class ShowcaseCardWidget(QFrame):
+    def __init__(self, game, title, parent=None):
+        super().__init__(parent)
+        self.setObjectName("ShowcaseCard")
+        self.game = game
+        self.setFixedHeight(160)
+
+        main_layout = QHBoxLayout(self)
+        main_layout.setContentsMargins(15, 15, 15, 15)
+        main_layout.setSpacing(15)
+
+        # Imagem à esquerda
+        image_label = QLabel()
+        image_label.setObjectName("ShowcaseCardImage")
+        image_label.setFixedSize(220, 130) # Tamanho da arte horizontal
+        image_path = self.game.get("header_path") or self.game.get("image")
+        if image_path and os.path.exists(image_path):
+            pixmap = QPixmap(image_path).scaled(image_label.size(), Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation)
+            image_label.setPixmap(pixmap)
+        main_layout.addWidget(image_label)
+
+        # Textos à direita
+        info_layout = QVBoxLayout()
+        title_label = QLabel(title.upper())
+        title_label.setObjectName("ShowcaseCardTitle")
+
+        name_label = QLabel(self.game["name"])
+        name_label.setObjectName("ShowcaseCardGameName")
+
+        info_layout.addWidget(title_label)
+        info_layout.addWidget(name_label)
+        info_layout.addStretch()
+        main_layout.addLayout(info_layout, 1)
 
 class ProfileTab(QWidget):
     # (O __init__, paintEvent, e _setup_ui continuam os mesmos)
@@ -104,15 +138,10 @@ class ProfileTab(QWidget):
             most_played_game = max(all_games, key=lambda g: g.get("total_playtime", 0))
             if most_played_game.get("total_playtime", 0) == 0:
                 most_played_game = None
-
-        # --- LÓGICA DE SELEÇÃO DE FAVORITO CORRIGIDA ---
         favorite_game = None
-        # 1. Tenta pegar o favorito que o usuário escolheu
         showcased_favorite_id = profile_data.get("showcased_favorite_id")
         if showcased_favorite_id:
             favorite_game = self.game_manager.get_game_by_id(showcased_favorite_id)
-        
-        # 2. Se não houver um escolhido (ou se ele foi desfavoritado), pega o primeiro da lista de favoritos
         if not favorite_game:
             favorite_games_list = self.game_manager.get_favorite_games()
             if favorite_games_list:
@@ -124,16 +153,13 @@ class ProfileTab(QWidget):
 
         self.showcase_layout.addStretch(1)
         if favorite_game:
-            card = AnimatedGameCard(favorite_game, title="JOGO FAVORITO", card_size=(450, 180), mode='horizontal')
-            card.clicked.connect(lambda chk=False, g=favorite_game: self.main_window_ref.library_tab_widget._show_game_details(g))
+            card = ShowcaseCardWidget(favorite_game, title="JOGO FAVORITO")
             self.showcase_layout.addWidget(card)
         if most_played_game:
-            card = AnimatedGameCard(most_played_game, title="MAIS JOGADO", card_size=(450, 180), mode='horizontal')
-            card.clicked.connect(lambda chk=False, g=most_played_game: self.main_window_ref.library_tab_widget._show_game_details(g))
+            card = ShowcaseCardWidget(most_played_game, title="MAIS JOGADO")
             self.showcase_layout.addWidget(card)
         if last_played_game:
-            card = AnimatedGameCard(last_played_game, title="ÚLTIMO JOGO JOGADO", card_size=(450, 180), mode='horizontal')
-            card.clicked.connect(lambda chk=False, g=last_played_game: self.main_window_ref.library_tab_widget._show_game_details(g))
+            card = ShowcaseCardWidget(last_played_game, title="ÚLTIMO JOGO JOGADO")
             self.showcase_layout.addWidget(card)
         self.showcase_layout.addStretch(1)
 

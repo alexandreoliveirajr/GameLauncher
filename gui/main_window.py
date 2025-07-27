@@ -6,19 +6,19 @@ from datetime import datetime
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLineEdit, QApplication, QMessageBox, QLabel,
-    QPushButton, QFrame, QStackedWidget  # Adicionamos QPushButton, QFrame, QStackedWidget
+    QPushButton, QFrame, QStackedWidget, QMenu
 )
 from PyQt6.QtGui import QIcon, QAction, QActionGroup
-from PyQt6.QtCore import Qt, QTimer, QSize
+from PyQt6.QtCore import Qt, QTimer, QSize, QPoint
 
 from core.game_manager import GameManager
 from core.game_launcher import GameLauncher
 from core.profile_manager import ProfileManager
 from core.settings_manager import SettingsManager
 
+from gui.game_display_widget import GameDisplayWidget
 from gui.add_game_tab import AddGameTab
-from gui.library_tab import LibraryTab
-from gui.recent_favorites_tabs import FavoritesTab, RecentTab
+from gui.recent_favorites_tabs import RecentTab
 from gui.game_details_dialog import GameDetailsDialog
 from gui.profile_tab import ProfileTab
 from gui.import_tab import ImportTab
@@ -43,6 +43,9 @@ class MainWindow(QMainWindow):
         self.playtime_tracker.setInterval(15000)
         self.playtime_tracker.timeout.connect(self._check_running_games)
         self.playtime_tracker.start()
+
+        self.current_sort_by = "Nome (A-Z)"
+        self.current_view_mode = "Grade"
         
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
@@ -117,6 +120,8 @@ class MainWindow(QMainWindow):
         self.view_options_btn.setFixedSize(40, 40)
         self.view_options_btn.setToolTip("Opções de Exibição")
 
+        self.view_options_btn.clicked.connect(self.show_options_menu)
+
         top_nav_bar_layout.addWidget(self.view_options_btn)
 
         top_nav_bar_layout.addStretch()
@@ -134,39 +139,35 @@ class MainWindow(QMainWindow):
         self.add_games_btn.setObjectName("AddGamesButton")
         self.add_games_btn.setIcon(QIcon("assets/icons/plus-square.svg"))
         self.add_games_btn.setIconSize(QSize(16,16))
+
         top_nav_bar_layout.addWidget(self.add_games_btn)
-
-
-        content_layout.addWidget(top_nav_bar) # Adiciona a barra de navegação ao layout
-        # --- FIM DO BLOCO NOVO ---
-        
+        content_layout.addWidget(top_nav_bar) 
         self.stacked_widget = QStackedWidget()
         self.stacked_widget.setObjectName("MainContent")
         content_layout.addWidget(self.stacked_widget)
-
-        self.library_tab_widget = LibraryTab(self.game_manager, self.game_launcher, self)
+        self.library_display = GameDisplayWidget(self)
+        self.favorites_display = GameDisplayWidget(self)
+        
         self.profile_tab_widget = ProfileTab(self.profile_manager, self.game_manager, self)
-        self.favorites_tab_widget = FavoritesTab(self.game_manager, self.game_launcher, self)
+        
         self.recent_tab_widget = RecentTab(self.game_manager, self.game_launcher, self)
         self.add_game_tab_widget = AddGameTab(self.game_manager, self)
         self.import_tab_widget = ImportTab(self.game_manager, self)
         
-        self.stacked_widget.addWidget(self.library_tab_widget)
+        self.stacked_widget.addWidget(self.library_display)
+        self.stacked_widget.addWidget(self.favorites_display)
         self.stacked_widget.addWidget(self.profile_tab_widget)
-        self.stacked_widget.addWidget(self.favorites_tab_widget)
         self.stacked_widget.addWidget(self.recent_tab_widget)
         self.stacked_widget.addWidget(self.add_game_tab_widget)
         self.stacked_widget.addWidget(self.import_tab_widget)
-        self.view_options_btn.clicked.connect(self.library_tab_widget.show_options_menu)
+        
 
-        btn_library.clicked.connect(lambda: self.stacked_widget.setCurrentWidget(self.library_tab_widget))
+        btn_library.clicked.connect(lambda: self.stacked_widget.setCurrentWidget(self.library_display))
         btn_profile.clicked.connect(lambda: self.stacked_widget.setCurrentWidget(self.profile_tab_widget))
-        btn_favorites.clicked.connect(lambda: self.stacked_widget.setCurrentWidget(self.favorites_tab_widget))
+        btn_favorites.clicked.connect(lambda: self.stacked_widget.setCurrentWidget(self.favorites_display))
         btn_recent.clicked.connect(lambda: self.stacked_widget.setCurrentWidget(self.recent_tab_widget))
         btn_add_game.clicked.connect(lambda: self.stacked_widget.setCurrentWidget(self.add_game_tab_widget))
         btn_import.clicked.connect(lambda: self.stacked_widget.setCurrentWidget(self.import_tab_widget))
-
-        # Agora, quando refresh_views for chamado, self.search_input já existe!
         self.refresh_views()
 
     def start_tracking_game(self, process, game):
@@ -208,46 +209,103 @@ class MainWindow(QMainWindow):
         self.library_tab_widget.populate_games(filtered_games)
         self.refresh_views()
 
+    def set_sort_option(self, sort_by):
+        """Atualiza a opção de ordenação e atualiza a tela."""
+        self.current_sort_by = sort_by
+        self.refresh_views()
+    
+    def set_view_mode(self, view_mode):
+        self.current_view_mode = view_mode
+        self.library_display.set_view_mode(view_mode)
+        self.favorites_display.set_view_mode(view_mode)
+        self.refresh_views()
+
+        # Em gui/main_window.py, dentro da classe MainWindow
+
+    def launch_game_from_list(self, game):
+        """Inicia o primeiro executável de um jogo da lista."""
+        paths = game.get("paths", [])
+        if not paths:
+            self.show_message_box("Erro", "Este jogo não tem um executável configurado.", "warning")
+            return
+
+        # Abre a janela de detalhes e já clica em "Jogar"
+        dialog = GameDetailsDialog(game, self.game_manager, self.game_launcher, self)
+        dialog._launch_game(paths[0]['path'])
+
+    def show_options_menu(self):
+        menu = QMenu(self)
+        
+        # --- Menu de Ordenação ---
+        sort_menu = menu.addMenu("Ordenar por")
+        sort_group = QActionGroup(self)
+        sort_options = ["Nome (A-Z)", "Mais Jogado", "Jogado Recentemente"]
+        
+        for option in sort_options:
+            action = QAction(option, self)
+            action.setCheckable(True)
+            if option == self.current_sort_by:
+                action.setChecked(True)
+            action.triggered.connect(lambda checked, o=option: self.set_sort_option(o))
+            sort_group.addAction(action)
+            sort_menu.addAction(action)
+
+        menu.addSeparator()
+
+        # --- Menu de Visualização (Grade/Lista) ---
+        view_group = QActionGroup(self)
+        
+        grid_action = QAction("Grade", self)
+        grid_action.setCheckable(True)
+        if self.current_view_mode == "Grade":
+            grid_action.setChecked(True)
+        grid_action.triggered.connect(lambda: self.set_view_mode("Grade"))
+        view_group.addAction(grid_action)
+        menu.addAction(grid_action)
+        
+        list_action = QAction("Lista", self)
+        list_action.setCheckable(True)
+        if self.current_view_mode == "Lista":
+            list_action.setChecked(True)
+        list_action.triggered.connect(lambda: self.set_view_mode("Lista"))
+        view_group.addAction(list_action)
+        menu.addAction(list_action)
+
+        menu.exec(self.view_options_btn.mapToGlobal(QPoint(0, self.view_options_btn.height())))
+
+    def show_game_details(self, game):
+        dialog = GameDetailsDialog(game, self.game_manager, self.game_launcher, self)
+        dialog.exec()
+        self.refresh_views()
+
     def refresh_views(self):
-        logging.info("Atualizando todas as visualizações (Biblioteca, Favoritos, etc.)...")
+        logging.info("Atualizando todas as visualizações...")
         search_term = self.search_input.text()
 
-        # --- Lógica da BIBLIOTECA (permanece a mesma) ---
-        lib_tag = self.library_tab_widget.current_tag
-        lib_sort = self.library_tab_widget.current_sort
-        filtered_and_sorted_games = self.game_manager.get_filtered_games(
-            search_term, tag=lib_tag, sort_by=lib_sort
-        )
-        self.library_tab_widget.populate_games(filtered_and_sorted_games)
+        # 1. Popula a grade da Biblioteca Principal
+        library_games = self.game_manager.get_filtered_games(search_term, sort_by=self.current_sort_by)
+        self.library_display.populate_games(library_games)
 
-        # --- LÓGICA ATUALIZADA PARA FAVORITOS ---
-        fav_sort = self.favorites_tab_widget.current_sort
+        # 2. Popula a grade de Favoritos
         favorite_games = self.game_manager.get_favorite_games()
-
-        # Aplica busca aos favoritos
+        # Filtra os favoritos se houver texto na busca
         if search_term:
-            search_lower = search_term.lower()
-            favorite_games = [g for g in favorite_games if search_lower in g['name'].lower()]
-        
-        # Aplica ordenação aos favoritos
-        if fav_sort == "Mais Jogado":
-            favorite_games.sort(key=lambda g: g.get('total_playtime', 0), reverse=True)
-        elif fav_sort == "Jogado Recentemente":
-            for g in favorite_games:
-                if isinstance(g.get("recent_play_time"), str):
-                    try: g["recent_play_time"] = datetime.fromisoformat(g["recent_play_time"])
-                    except: g["recent_play_time"] = None
-            favorite_games.sort(key=lambda g: g.get('recent_play_time') or datetime.min, reverse=True)
-        # "Nome (A-Z)" já é o padrão do get_favorite_games, mas podemos garantir
-        else: 
-             favorite_games.sort(key=lambda g: g['name'].lower())
-        
-        # O método populate_favorites agora sabe qual view (grade/lista) usar
-        self.favorites_tab_widget.populate_favorites(favorite_games)
-        
-        # --- Resto da atualização (permanece o mesmo) ---
+            favorite_games = [g for g in favorite_games if search_term.lower() in g['name'].lower()]
+        self.favorites_display.populate_games(favorite_games)
+
+        # 3. Atualiza o resto
         self.recent_tab_widget.populate_recent_games(self.game_manager.get_recent_games())
         self.profile_tab_widget.load_profile_data()
+
+    # Em gui/main_window.py, dentro da classe MainWindow
+
+    def show_game_details(self, game):
+        """Cria e exibe a janela de detalhes para um jogo específico."""
+        dialog = GameDetailsDialog(game, self.game_manager, self.game_launcher, self)
+        dialog.exec()
+        # Atualizamos as views depois que o diálogo fecha, caso o usuário
+        # tenha favoritado, editado ou deletado o jogo.
+        self.refresh_views()
 
     def show_message_box(self, title, message, icon_type="info", buttons=QMessageBox.StandardButton.Ok):
         msg_box = QMessageBox(self)

@@ -6,12 +6,6 @@ QMainWindow, QWidget {
     font-family: 'Segoe UI', Arial, sans-serif;
 }
 
-/* Exemplo de como estilizaremos no futuro */
-#GameCardName {
-    font-weight: bold;
-    font-size: 12px;
-}
-
 #DetailsGameTitle {
     font-size: 34px;
     font-weight: bold;
@@ -33,14 +27,19 @@ QMainWindow, QWidget {
 }
 
 #RightContentArea {
-    background-color: {background}; /* Usa a cor de fundo principal */
+    /* Usamos a cor de fundo principal do nosso tema */
+    background-color: {background}; 
+    /* Adicionamos um padding generoso para dar "respiro" ao conteúdo */
+    padding: 25px 35px;
 }
 
 #LogoLabel {
     color: {text-primary};
-    font-size: 24px;
+    font-size: 20px; /* Um pouco menor */
     font-weight: bold;
     padding-bottom: 20px;
+    background-color: transparent; /* Garante que não tenha fundo */
+    letter-spacing: 2px; /* Aumenta o espaçamento entre as letras */
 }
 
 /* Estilo Básico para os botões da Sidebar */
@@ -86,18 +85,6 @@ QMainWindow, QWidget {
     color: {text-primary};
 }
 
-/* A imagem dentro do card */
-#GameCardImage {
-    border-radius: 12px;
-}
-
-/* O nome do jogo abaixo da imagem */
-#GameCardName {
-    font-weight: bold;
-    font-size: 14px;
-    margin-top: 5px;
-}
-
 /* --- ESTILO DOS ITENS DA LISTA DE JOGOS --- */
 #GameListItem {
     background-color: {card};
@@ -127,4 +114,153 @@ QMainWindow, QWidget {
 }
 #GameListItem QPushButton:hover {
     background-color: {accent-success-hover};
+}
+
+QScrollArea {
+    background-color: transparent;
+    border: none;
+}
+
+/* --- ESTILO DOS CARDS DE JOGO NA GRADE (VERSÃO FINAL PROFISSIONAL) --- */
+
+QFrame#GameCard {
+    background-color: {card};
+    border: 1px solid {card-border};
+    
+}
+
+QFrame#GameCard:hover {
+    border-color: #8A4DFF;
+}
+
+/* A área da imagem (QLabel) */
+#GameCardImage {
+    background-color: #1E1F22; /* Fundo bem escuro para o letterbox */
+}
+
+
+/* A área do nome (QLabel) */
+#GameCardName {
+    color: {text-secondary};
+    font-weight: bold;
+    font-size: 14px;
+}
+
+#PlatformIcon {
+    /* O ícone já é carregado da imagem, não precisa de muito estilo */
+    background-color: transparent;
+}
+
+
+/* O container do texto */
+#GameCardTextContainer {
+    background-color: transparent;
+}
+
+/* O nome do jogo */
+#GameCardName {
+    font-weight: bold;
+    font-size: 14px;
+    background: transparent;
+    color: {text-primary};
+}
+
+/* --- ESTILO DA BARRA DE ROLAGEM --- */
+QScrollBar:vertical {
+    border: none;
+    background-color: #2C2D30; /* Fundo do trilho */
+    width: 14px;
+    margin: 1px 0 1px 0;
+}
+
+/* O cabo que o usuário arrasta */
+QScrollBar::handle:vertical {
+    background-color: #4C566A; /* Um cinza-azulado para destaque */
+    min-height: 30px;
+    border-radius: 7px;
+    border: 1px solid #3A3B3E; /* Borda sutil para profundidade */
+}
+
+QScrollBar::handle:vertical:hover {
+    background-color: #5E81AC; /* Cor mais clara no hover */
+}
+
+/* Esconde as setas e remove o fundo das páginas */
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0;
+    background: none;
+}
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+    background: none;
+}
+
+/* Estilo do Campo de Busca */
+#SearchInput {
+    background-color: #2C2D30;
+    color: {text-primary};
+    border: 1px solid #3A3B3E;
+    border-radius: 8px;
+    padding: 8px 15px;
+    font-size: 14px;
+}
+
+#SearchInput:focus {
+    border-color: #8A4DFF; /* Cor de destaque roxa */
+}
+
+/* --- ESTILO DOS ITENS DA LISTA (VERSÃO APRIMORADA) --- */
+
+#GameListItem {
+    background-color: {card};
+    border: 1px solid {card-border};
+    border-radius: 8px; /* Raio de borda igual ao da grade */
+}
+#GameListItem:hover {
+    border-color: {accent}; /* Efeito de hover igual ao da grade */
+}
+
+#GameListItem QLabel { background: transparent; }
+
+#GameListItemImage {
+    border-radius: 6px; /* Arredondamento para a imagem quadrada */
+}
+
+#GameListItemName {
+    color: {text-primary};
+    font-size: 16px;
+    font-weight: bold;
+}
+#GameListItemPlaytime {
+    color: {text-secondary};
+}
+
+/* Estilo especial para o botão de Jogar da lista */
+#GameListItem #PlayButton {
+    background-color: {accent-success};
+    color: {text-primary};
+    font-weight: bold;
+    border-radius: 5px;
+    font-size: 14px;
+}
+#GameListItem #PlayButton:hover {
+    background-color: {accent-success-hover};
+}
+
+/* --- ESTILO DOS CARDS DE DESTAQUE DO PERFIL --- */
+#ShowcaseCard {
+    background-color: {card};
+    border-radius: 8px;
+}
+#ShowcaseCardImage {
+    border-radius: 6px;
+}
+#ShowcaseCardTitle {
+    color: {accent};
+    font-size: 12px;
+    font-weight: bold;
+}
+#ShowcaseCardGameName {
+    color: {text-primary};
+    font-size: 20px;
+    font-weight: bold;
 }

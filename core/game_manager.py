@@ -123,13 +123,27 @@ class GameManager:
     def delete_game(self, game_to_delete):
         game_id = game_to_delete['id']
         conn = get_db_connection()
-        # A configuração "ON DELETE CASCADE" na tabela 'executables' garante
-        # que os executáveis associados também sejam deletados.
-        conn.execute("DELETE FROM games WHERE id = ?", (game_id,))
-        conn.commit()
-        conn.close()
-        logging.info(f"Jogo ID {game_id} ('{game_to_delete['name']}') deletado.")
-        return True
+        cursor = conn.cursor()
+
+        try:
+            # Deleta explicitamente as associações de tags
+            cursor.execute("DELETE FROM game_tags WHERE game_id = ?", (game_id,))
+
+            # Deleta explicitamente os executáveis
+            cursor.execute("DELETE FROM executables WHERE game_id = ?", (game_id,))
+
+            # Finalmente, deleta o jogo principal
+            cursor.execute("DELETE FROM games WHERE id = ?", (game_id,))
+
+            conn.commit()
+            logging.info(f"Jogo ID {game_id} ('{game_to_delete['name']}') e seus dados associados foram deletados.")
+            return True
+        except Exception as e:
+            conn.rollback()
+            logging.error(f"Erro ao deletar o jogo ID {game_id}: {e}")
+            return False
+        finally:
+            conn.close()
 
     def get_all_games(self):
         """Busca todos os jogos, usado para contagens e verificações internas."""
