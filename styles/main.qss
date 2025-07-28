@@ -151,10 +151,8 @@ QFrame#GameCard:hover {
     background-color: transparent;
 }
 
-
-/* O container do texto */
 #GameCardTextContainer {
-    background-color: transparent;
+    border-top: 1px solid {card-border};
 }
 
 /* O nome do jogo */
@@ -208,21 +206,21 @@ QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
     border-color: #8A4DFF; /* Cor de destaque roxa */
 }
 
-/* --- ESTILO DOS ITENS DA LISTA (VERSÃO APRIMORADA) --- */
+/* --- ESTILO DOS ITENS DA LISTA (VERSÃO REFINADA) --- */
 
 #GameListItem {
     background-color: {card};
     border: 1px solid {card-border};
-    border-radius: 8px; /* Raio de borda igual ao da grade */
+    border-radius: 0px; /* Cantos quadrados para consistência */
 }
 #GameListItem:hover {
-    border-color: {accent}; /* Efeito de hover igual ao da grade */
+    border-color: {accent};
 }
 
 #GameListItem QLabel { background: transparent; }
 
 #GameListItemImage {
-    border-radius: 6px; /* Arredondamento para a imagem quadrada */
+    border-radius: 0px; /* Cantos quadrados para consistência */
 }
 
 #GameListItemName {
@@ -234,16 +232,21 @@ QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
     color: {text-secondary};
 }
 
-/* Estilo especial para o botão de Jogar da lista */
+/* Botão "Jogar" com mais destaque e feedback */
 #GameListItem #PlayButton {
-    background-color: {accent-success};
+    background-color: {accent}; /* Cor de destaque roxa, mais chamativa */
     color: {text-primary};
     font-weight: bold;
     border-radius: 5px;
     font-size: 14px;
+    border: 1px solid #A06FFF; /* Borda sutil para mais profundidade */
 }
 #GameListItem #PlayButton:hover {
-    background-color: {accent-success-hover};
+    background-color: #9B6BFF; /* Tom mais claro */
+}
+#GameListItem #PlayButton:pressed {
+    background-color: #7A3DDF; /* Tom mais escuro ao pressionar (feedback tátil) */
+    border-color: #7A3DDF;
 }
 
 /* --- ESTILO DOS CARDS DE DESTAQUE DO PERFIL --- */
@@ -263,4 +266,13 @@ QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
     color: {text-primary};
     font-size: 20px;
     font-weight: bold;
+}
+
+/* --- ESTILO DA MENSAGEM DE BIBLIOTECA VAZIA --- */
+#EmptyLibraryLabel {
+    color: {text-secondary};
+    font-size: 20px;
+    font-weight: bold;
+    qproperty-alignment: 'AlignCenter'; /* Força a centralização */
+    padding: 100px; /* Adiciona um bom espaçamento ao redor */
 }

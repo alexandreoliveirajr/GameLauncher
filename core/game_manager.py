@@ -80,13 +80,14 @@ class GameManager:
         # Atualiza a tabela 'games'
         cursor.execute("""
             UPDATE games SET
-                name = ?, image_path = ?, background_path = ?, header_path = ?
+                name = ?, image_path = ?, background_path = ?, header_path = ?, source = ?
             WHERE id = ?
         """, (
             new_game_data.get('name', old_game_data['name']),
             new_game_data.get('image', old_game_data.get('image')),
             new_game_data.get('background', old_game_data.get('background')),
             new_game_data.get('header', old_game_data.get('header')),
+            new_game_data.get('source', old_game_data.get('source')),
             game_id
         ))
 
@@ -149,7 +150,7 @@ class GameManager:
         """Busca todos os jogos, usado para contagens e verificações internas."""
         conn = get_db_connection()
         rows = conn.execute("""
-            SELECT id, name, image_path as image, background_path as background, header_path,
+            SELECT id, name, source, image_path as image, background_path as background, header_path,
                    favorite, total_playtime, last_play_time
             FROM games ORDER BY name COLLATE NOCASE ASC
         """).fetchall()
@@ -162,7 +163,7 @@ class GameManager:
             return None
         conn = get_db_connection()
         row = conn.execute("""
-            SELECT id, name, image_path as image, background_path as background, header_path,
+            SELECT id, name, source, image_path as image, background_path as background, header_path,
                    favorite, total_playtime, last_play_time
             FROM games WHERE id = ?
         """, (game_id,)).fetchone()
@@ -172,7 +173,7 @@ class GameManager:
     def get_filtered_games(self, search_text, tag=None, sort_by="Nome (A-Z)"):
         conn = get_db_connection()
         query = """
-            SELECT id, name, image_path as image, background_path as background, header_path,
+            SELECT id, name, source, image_path as image, background_path as background, header_path,
                    favorite, total_playtime, last_play_time
             FROM games
         """
@@ -202,7 +203,7 @@ class GameManager:
     def get_favorite_games(self):
         conn = get_db_connection()
         rows = conn.execute("""
-            SELECT id, name, image_path as image, background_path as background, header_path,
+            SELECT id, name, source, image_path as image, background_path as background, header_path,
                    favorite, total_playtime, last_play_time
             FROM games WHERE favorite = 1 ORDER BY name COLLATE NOCASE ASC
         """).fetchall()
@@ -212,7 +213,7 @@ class GameManager:
     def get_recent_games(self):
         conn = get_db_connection()
         rows = conn.execute("""
-            SELECT id, name, image_path as image, background_path as background, header_path,
+            SELECT id, name, source, image_path as image, background_path as background, header_path,
                    favorite, total_playtime, last_play_time
             FROM games WHERE last_play_time IS NOT NULL ORDER BY last_play_time DESC
         """).fetchall()

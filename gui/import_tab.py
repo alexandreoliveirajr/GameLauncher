@@ -91,9 +91,9 @@ class ImportTab(QWidget):
             "Atualizar Lista de Apps",
             "Isso fará o download de um arquivo grande (~25MB) da Steam com todos os jogos disponíveis. Esta operação só precisa ser feita uma vez a cada vários meses.\n\nDeseja continuar?",
             "question",
-            QMessageBox.Yes | QMessageBox.No
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
-        if reply == QMessageBox.Yes:
+        if reply == QMessageBox.StandardButton.Yes:
             success = steam_api.update_steam_app_list()
             if success:
                 self.main_window_ref.show_message_box("Sucesso", "A lista de aplicativos da Steam foi atualizada com sucesso.", "info")
@@ -220,7 +220,7 @@ class ImportTab(QWidget):
                 image_path=image_path, 
                 background_path=background_path, 
                 header_path=header_path,
-                source='steam', # Informa que a fonte é a Steam
+                source=game.get('source', 'local'), # Informa que a fonte é a Steam
                 app_id=app_id    # Passa o AppID do jogo
             )
             added_count += 1

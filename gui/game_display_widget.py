@@ -54,29 +54,39 @@ class GameDisplayWidget(QWidget): # <-- Classe renomeada
 
         if not games_list:
             no_games_label_grid = QLabel("Nenhum jogo encontrado.")
+            no_games_label_grid.setObjectName("EmptyLibraryLabel")
             no_games_label_list = QLabel("Nenhum jogo encontrado.")
+            no_games_label_list.setObjectName("EmptyLibraryLabel")
             self.grid_layout.addWidget(no_games_label_grid, 0, 0)
             self.list_layout.addWidget(no_games_label_list)
             return
 
-        # --- LÓGICA CORRIGIDA ---
-        # Um único loop para popular as duas visualizações ao mesmo tempo
-
         columns = 6
         for idx, game in enumerate(games_list):
-            # Cria e configura o CARD para a GRADE
+            # --- LÓGICA DA "CAIXA INVISÍVEL" ---
+
+            # 1. Cria o nosso card animado como antes
             card = AnimatedGameCard(game)
             card.clicked.connect(lambda g=game: self.main_window_ref.show_game_details(g))
-            row, col = idx // columns, idx % columns
-            self.grid_layout.addWidget(card, row, col, Qt.AlignmentFlag.AlignTop)
 
-            # Cria e configura o ITEM para a LISTA
+            # 2. Cria um container estático e invisível
+            container = QWidget()
+            container_layout = QVBoxLayout(container)
+            container_layout.setContentsMargins(5, 5, 5, 5)
+            container_layout.addWidget(card)
+
+            # 3. Adiciona o CONTAINER (e não o card) à grade principal
+            row, col = idx // columns, idx % columns
+            self.grid_layout.addWidget(container, row, col, Qt.AlignmentFlag.AlignTop)
+
+            # --- FIM DA LÓGICA ---
+
+            # Cria e configura o ITEM para a LISTA (sem mudanças aqui)
             list_item = GameListItemWidget(game)
             list_item.details_clicked.connect(lambda g=game: self.main_window_ref.show_game_details(g))
             list_item.play_clicked.connect(lambda g=game: self.main_window_ref.launch_game_from_list(g))
             self.list_layout.addWidget(list_item)
 
-        # Adiciona os espaçadores no final, fora do loop
         self.grid_layout.addItem(QSpacerItem(20, 40, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum), 0, columns)
         self.list_layout.addStretch()
 

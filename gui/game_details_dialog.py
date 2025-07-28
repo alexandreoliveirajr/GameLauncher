@@ -6,8 +6,8 @@ from datetime import datetime
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QMessageBox, QComboBox, QLineEdit, QFormLayout, QGroupBox,
-    QInputDialog, QFileDialog, QWidget,
-    QSpacerItem, QSizePolicy
+    QInputDialog, QFileDialog, QWidget, QSpacerItem, QSizePolicy,
+    QComboBox
 )
 from PyQt6.QtGui import QPixmap, QPainter, QBrush, QColor
 from PyQt6.QtCore import Qt, QPoint
@@ -158,6 +158,24 @@ class GameDetailsDialog(QDialog):
         self.tags_input.setPlaceholderText("RPG, Indie, Ação... (separadas por vírgula)")
         edit_layout.addRow("Tags:", self.tags_input)
 
+        self.source_combo = QComboBox()
+
+        available_sources = []
+        try:
+            icon_dir = "assets/icons/platform"
+            available_sources = [os.path.splitext(f)[0] for f in os.listdir(icon_dir) if f.endswith(".svg")]
+        except FileNotFoundError:
+            available_sources = ["local", "steam", "epic"] # Fallback
+
+        current_source = self.current_edited_game.get("source", "local")
+
+        for source_name in available_sources:
+            self.source_combo.addItem(source_name.capitalize(), source_name)
+            if source_name == current_source:
+                self.source_combo.setCurrentText(source_name.capitalize())
+
+        edit_layout.addRow("Plataforma:", self.source_combo)
+
         paths_group_box = QGroupBox("Executáveis"); 
         self.paths_edit_layout = QVBoxLayout(); paths_group_box.setLayout(self.paths_edit_layout)
         edit_layout.addRow(paths_group_box); self._refresh_edit_paths_labels()
@@ -294,6 +312,8 @@ class GameDetailsDialog(QDialog):
         self.current_edited_game["name"] = new_name
         tags_text = self.tags_input.text().strip()
         self.current_edited_game["tags"] = [tag.strip() for tag in tags_text.split(',')] if tags_text else []
+        self.current_edited_game["source"] = self.source_combo.currentData()
+        
         self.game_manager.update_game(self.original_game_state, self.current_edited_game)
         dialog.accept()
 

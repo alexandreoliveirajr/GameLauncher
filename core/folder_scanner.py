@@ -60,11 +60,15 @@ class FolderScanner:
             
             # Tenta encontrar a AppID da Steam para esta pasta
             app_id = steam_api.find_steam_app_id(folder)
+
+            # Se encontrou um app_id, a fonte é 'steam'. Senão, é 'local'.
+            source = 'steam' if app_id else 'local'
             
             game_data = {
                 "name": os.path.splitext(os.path.basename(main_exe['path']))[0],
                 "path": main_exe['path'],
-                "app_id": app_id # Adiciona a AppID se encontrada
+                "app_id": app_id,
+                "source": source
             }
             return game_data
         
