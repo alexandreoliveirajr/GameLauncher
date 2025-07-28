@@ -102,7 +102,7 @@ def find_steam_app_id(game_folder_path):
         logging.warning(f"Erro ao procurar por manifestos da Steam perto de {game_folder_path}: {e}")
     return None
 
-def download_steam_artwork(app_id, output_folder_name="steam_artwork"):
+def download_steam_artwork(app_id, output_folder_name="game_artwork"):
     if not app_id: return None
     poster_url = f"https://cdn.akamai.steamstatic.com/steam/apps/{app_id}/library_600x900.jpg"
     hero_url = f"https://cdn.akamai.steamstatic.com/steam/apps/{app_id}/library_hero.jpg"

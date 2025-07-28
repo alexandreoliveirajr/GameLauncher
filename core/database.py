@@ -17,19 +17,25 @@ def initialize_database():
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    # Tabela de Jogos
+    # Tabela de Jogos (com novos campos para dados do IGDB)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS games (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
-        source TEXT DEFAULT 'local', -- De onde o jogo veio (ex: 'steam', 'epic', 'local')
-        app_id TEXT, -- ID específico da loja (ex: Steam AppID)
-        image_path TEXT,
-        background_path TEXT,
-        header_path TEXT,
-        favorite INTEGER NOT NULL DEFAULT 0, -- 0 para False, 1 para True
-        total_playtime INTEGER NOT NULL DEFAULT 0, -- Em segundos
-        last_play_time TEXT -- Data no formato ISO
+        source TEXT DEFAULT 'local',
+        app_id TEXT,
+        igdb_id TEXT,                   -- ID do jogo no IGDB
+        summary TEXT,                   -- Resumo/descrição
+        genres TEXT,                    -- Gêneros (ex: "RPG, Aventura")
+        release_date TEXT,              -- Data de lançamento
+        cover_url TEXT,                 -- URL da imagem de capa
+        screenshot_urls TEXT,           -- URLs de screenshots
+        image_path TEXT,                -- Caminho local para a capa
+        background_path TEXT,           -- Caminho local para o fundo
+        header_path TEXT,               -- Caminho local para o header
+        favorite INTEGER NOT NULL DEFAULT 0,
+        total_playtime INTEGER NOT NULL DEFAULT 0,
+        last_play_time TEXT
     );
     """)
 

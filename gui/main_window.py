@@ -134,13 +134,6 @@ class MainWindow(QMainWindow):
         self.search_input.textChanged.connect(self.refresh_views)
         top_nav_bar_layout.addWidget(self.search_input)
 
-        # Botão "Add Games"
-        self.add_games_btn = QPushButton(" Add Games")
-        self.add_games_btn.setObjectName("AddGamesButton")
-        self.add_games_btn.setIcon(QIcon("assets/icons/plus-square.svg"))
-        self.add_games_btn.setIconSize(QSize(16,16))
-
-        top_nav_bar_layout.addWidget(self.add_games_btn)
         content_layout.addWidget(top_nav_bar) 
         self.stacked_widget = QStackedWidget()
         self.stacked_widget.setObjectName("MainContent")

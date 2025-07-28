@@ -20,7 +20,7 @@ class AnimatedGameCard(QFrame):
         self.setObjectName("GameCard")
         self.game = game
         self.setFixedSize(self.CARD_SIZE)
-
+        
         self._setup_ui()
         self._setup_animation()
         self._setup_shadow()
@@ -34,6 +34,7 @@ class AnimatedGameCard(QFrame):
         self.image_label = QLabel()
         self.image_label.setObjectName("GameCardImage")
         self.image_label.setFixedHeight(self.IMAGE_HEIGHT)
+        self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         # 2. CONTAINER DA ÁREA DE TEXTO (continua igual)
         text_container = QFrame()
@@ -75,17 +76,10 @@ class AnimatedGameCard(QFrame):
 
     def _update_platform_icon(self):
         source = self.game.get("source", "local").lower()
-        # --- DEBUG ---
-        print(f"Jogo: '{self.game['name']}', Source do DB: '{source}'")
 
         icon_path = f"assets/icons/platform/{source}.svg"
-        print(f"Procurando ícone em: '{icon_path}'")
-        # -------------
 
         if not os.path.exists(icon_path):
-            # --- DEBUG ---
-            print(f"-> Ícone NÃO encontrado! Usando fallback 'local.svg'.")
-            # -------------
             icon_path = "assets/icons/platform/local.svg"
 
         if os.path.exists(icon_path):
@@ -136,18 +130,26 @@ class AnimatedGameCard(QFrame):
         self.shadow.setColor(QColor(0, 0, 0, 160)); self.setGraphicsEffect(self.shadow)
 
     def _setup_animation(self):
-        self.animation = QPropertyAnimation(self, b"pos")
-        self.animation.setDuration(150); self.animation.setEasingCurve(QEasingCurve.Type.OutQuad)
+        # Posição e tamanho do card quando está em repouso dentro da "caixa invisível"
+        self.rest_geometry = QRect(5, 5, self.CARD_WIDTH, self.CARD_HEIGHT)
+        # Posição e tamanho quando está "inflado"
+        self.hover_geometry = QRect(0, 0, self.CARD_WIDTH + 10, self.CARD_HEIGHT + 10)
+        
+        self.animation = QPropertyAnimation(self, b"geometry")
+        self.animation.setDuration(120) # Um pouco mais rápido
+        self.animation.setEasingCurve(QEasingCurve.Type.OutQuad)
 
     def enterEvent(self, event):
+        self.raise_()
         self.animation.stop()
-        self.animation.setStartValue(self.pos())
-        self.animation.setEndValue(self.pos() - QPoint(0, 5))
+        self.animation.setStartValue(self.geometry())
+        self.animation.setEndValue(self.hover_geometry) # Sempre anima para a posição de destaque exata
         self.animation.start()
-        self.raise_(); super().enterEvent(event)
+        super().enterEvent(event)
 
     def leaveEvent(self, event):
         self.animation.stop()
-        self.animation.setStartValue(self.pos())
-        self.animation.setEndValue(self.pos() + QPoint(0, 5))
-        self.animation.start(); super().leaveEvent(event)
+        self.animation.setStartValue(self.geometry())
+        self.animation.setEndValue(self.rest_geometry) # Sempre anima de volta para a posição de repouso exata
+        self.animation.start()
+        super().leaveEvent(event)

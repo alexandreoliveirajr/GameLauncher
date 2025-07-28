@@ -12,7 +12,8 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QPixmap, QPainter, QBrush, QColor
 from PyQt6.QtCore import Qt, QPoint
 from core import steam_api
-
+from core.igdb_api import IGDB_API, download_and_save_images
+from gui.igdb_search_dialog import IGDBSearchDialog
 
 class GameDetailsDialog(QDialog):
     def __init__(self, game, game_manager, game_launcher, main_window_ref, parent=None):
@@ -25,6 +26,7 @@ class GameDetailsDialog(QDialog):
         self.game_manager = game_manager
         self.game_launcher = game_launcher
         self.main_window_ref = main_window_ref
+        self.igdb_api = IGDB_API()
         
         self.setWindowTitle(self.game["name"])
         self.setFixedSize(800, 500)
@@ -198,9 +200,9 @@ class GameDetailsDialog(QDialog):
         self.bg_btn.clicked.connect(self._edit_change_background)
         edit_layout.addRow(self.bg_btn)
         
-        btn_search_steam = QPushButton("🔎 Buscar Arte da Steam por Nome")
-        btn_search_steam.clicked.connect(self._search_steam_artwork)
-        edit_layout.addRow(btn_search_steam)
+        btn_search_online = QPushButton("🔎 Buscar Informações Online (IGDB)")
+        btn_search_online.clicked.connect(lambda: self._search_online_data(name_input)) # Conecta ao novo método
+        edit_layout.addRow(btn_search_online)
 
         btn_save = QPushButton("Salvar Alterações")
         btn_save.clicked.connect(lambda: self._save_edited_game(name_input.text(), edit_dialog))
@@ -211,40 +213,66 @@ class GameDetailsDialog(QDialog):
             self.main_window_ref.refresh_views()
             self.accept()
 
-    def _search_steam_artwork(self):
-        app_list_path = os.path.join(steam_api.get_app_root_path(), "steam_app_list.json")
-        if not os.path.exists(app_list_path):
-            self.main_window_ref.show_message_box("Aviso", "A lista de aplicativos da Steam não foi baixada. Vá para a aba 'Importar Jogos' e clique em 'Baixar/Atualizar Lista de Apps da Steam' primeiro.", "warning")
+    def _search_online_data(self, name_input_widget):
+        """Busca o jogo no IGDB e preenche os campos."""
+        game_name_to_search = name_input_widget.text()
+        if not game_name_to_search:
+            self.main_window_ref.show_message_box("Aviso", "Digite um nome de jogo para buscar.", "warning")
             return
-
-        current_name = self.current_edited_game.get("name", "")
-        game_name, ok = QInputDialog.getText(self, "Buscar Arte", "Digite o nome exato do jogo para buscar na Steam:", text=current_name)
-
-        if not ok or not game_name.strip(): return
-
-        logging.info(f"Buscando AppID para '{game_name}'...")
-        app_id = steam_api.find_appid_by_name(game_name)
-
-        if not app_id:
-            self.main_window_ref.show_message_box("Não Encontrado", f"Nenhum jogo correspondente a '{game_name}' foi encontrado na lista da Steam.", "info")
-            return
-
-        logging.info(f"AppID {app_id} encontrado. Baixando artes...")
-        artwork = steam_api.download_steam_artwork(app_id)
-
-        if not artwork:
-            self.main_window_ref.show_message_box("Erro", "Não foi possível baixar as artes para este jogo, mesmo com o AppID encontrado.", "warning")
+        
+        print(f"Buscando '{game_name_to_search}' no IGDB...")
+        results = self.igdb_api.search_games(game_name_to_search)
+        
+        if not results:
+            self.main_window_ref.show_message_box("Busca Online", f"Nenhum resultado encontrado para '{game_name_to_search}'.", "info")
             return
             
-        self.current_edited_game["image"] = artwork.get("image")
-        self.current_edited_game["background"] = artwork.get("background")
-        self.current_edited_game["header_path"] = artwork.get("header")
-        
-        img_text = os.path.basename(artwork.get("image", "")) or "Nenhuma"
-        bg_text = os.path.basename(artwork.get("background", "")) or "Nenhuma"
-        self.img_btn.setText(f"Alterar Pôster (logo): {img_text}")
-        self.bg_btn.setText(f"Alterar Fundo (hero): {bg_text}")
-        self.main_window_ref.show_message_box("Sucesso!", "Artes da Steam baixadas e aplicadas. Clique em 'Salvar Alterações' para confirmar.", "info")
+        # Mostra a janela de resultados
+        results_dialog = IGDBSearchDialog(results, self)
+        if results_dialog.exec():
+            selected_game = results_dialog.get_selected_game()
+            if selected_game:
+                print("Jogo selecionado:", selected_game)
+
+                # --- ATUALIZA A UI E OS DADOS ---
+                name_input_widget.setText(selected_game["name"])
+
+                # ... (atualiza o dicionário com nome, summary, etc.)
+                self.tags_input.setText(", ".join(selected_game["genres"]))
+
+                # --- BLOCO NOVO PARA DOWNLOAD ---
+                print("Baixando artes do jogo...")
+                local_paths = download_and_save_images(selected_game)
+
+                # Atualiza o dicionário com os caminhos LOCAIS das imagens
+                self.current_edited_game.update(local_paths)
+
+                # Atualiza os botões na UI para mostrar que as imagens foram encontradas
+                if "image_path" in local_paths:
+                    self.img_btn.setText(f"Alterar Pôster: {os.path.basename(local_paths['image_path'])}")
+                if "background_path" in local_paths:
+                    self.bg_btn.setText(f"Alterar Fundo: {os.path.basename(local_paths['background_path'])}")
+
+                print("Download de artes concluído.")
+
+                
+                # --- ATUALIZA A UI E OS DADOS ---
+                # Atualiza o nome na caixa de texto
+                name_input_widget.setText(selected_game["name"])
+                
+                # Atualiza o dicionário interno com os novos dados
+                self.current_edited_game["name"] = selected_game["name"]
+                self.current_edited_game["summary"] = selected_game["summary"]
+                self.current_edited_game["igdb_id"] = str(selected_game["igdb_id"])
+                
+                # Converte a lista de gêneros para uma string separada por vírgula
+                self.tags_input.setText(", ".join(selected_game["genres"]))
+                
+                # Guarda as URLs para download (faremos o download no próximo passo)
+                self.current_edited_game["cover_url"] = selected_game["cover_url"]
+                self.current_edited_game["screenshot_urls"] = selected_game["screenshot_urls"]
+                
+                self.main_window_ref.show_message_box("Sucesso", "Dados do jogo preenchidos! Clique em 'Salvar Alterações' para confirmar.", "info")
 
     # O resto dos métodos (helpers) da classe continuam aqui, devidamente indentados
     def _format_playtime(self, total_seconds):
