@@ -33,19 +33,3 @@ class AvatarWidget(QWidget):
             self.image_label.setText("SEM\nAVATAR")
             self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
     
-    def paintEvent(self, event):
-        # Cria uma máscara redonda para aplicar ao widget
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-
-        # Máscara com cantos arredondados
-        mask = QBitmap(self.size())
-        mask.fill(Qt.GlobalColor.white) # MUDANÇA AQUI
-        mask_painter = QPainter(mask)
-        mask_painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        mask_painter.setBrush(Qt.GlobalColor.black) # MUDANÇA AQUI
-        mask_painter.drawRoundedRect(self.rect(), 20, 20)
-        mask_painter.end()
-
-        self.image_label.setMask(mask)
-        super().paintEvent(event)

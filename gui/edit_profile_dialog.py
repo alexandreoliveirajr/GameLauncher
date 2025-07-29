@@ -1,6 +1,7 @@
 # gui/edit_profile_dialog.py
 
 import os
+import pycountry
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QFormLayout, QLineEdit, QTextEdit,
@@ -8,16 +9,13 @@ from PyQt6.QtWidgets import (
     QComboBox
 )
 
-
 class EditProfileDialog(QDialog):
     def __init__(self, profile_manager, game_manager, parent=None):
         super().__init__(parent)
-        # Pega as "flags" (configurações) atuais da janela
         flags = self.windowFlags()
-        # Remove APENAS a flag do botão de ajuda, mantendo todas as outras
         self.setWindowFlags(flags & ~Qt.WindowType.WindowContextHelpButtonHint)
         self.profile_manager = profile_manager
-        self.game_manager = game_manager # Precisamos para listar os favoritos
+        self.game_manager = game_manager
         self.current_data = self.profile_manager.get_data().copy()
 
         self.new_avatar_path = self.current_data.get("avatar_path")
@@ -34,9 +32,19 @@ class EditProfileDialog(QDialog):
         self.username_input = QLineEdit(self.current_data.get("username", ""))
         form_layout.addRow("Nome de Usuário:", self.username_input)
 
+        # --- NOVO CAMPO: Nome Verdadeiro ---
+        self.real_name_input = QLineEdit(self.current_data.get("real_name", ""))
+        self.real_name_input.setPlaceholderText("Opcional")
+        form_layout.addRow("Nome Verdadeiro:", self.real_name_input)
+
         self.bio_input = QTextEdit(self.current_data.get("bio", ""))
         self.bio_input.setMaximumHeight(100)
         form_layout.addRow("Bio:", self.bio_input)
+        
+        # --- NOVO CAMPO: País ---
+        self.country_combo = QComboBox()
+        self.populate_countries_combo()
+        form_layout.addRow("País:", self.country_combo)
 
         avatar_text = os.path.basename(self.new_avatar_path) if self.new_avatar_path else "Nenhum"
         self.avatar_btn = QPushButton(f"Avatar: {avatar_text}")
@@ -48,7 +56,6 @@ class EditProfileDialog(QDialog):
         self.background_btn.clicked.connect(self._select_background)
         form_layout.addRow("Alterar Fundo do Perfil:", self.background_btn)
 
-        # ADICIONADO: ComboBox para selecionar o jogo favorito em destaque
         self.favorite_combo = QComboBox()
         self.populate_favorites_combo()
         form_layout.addRow("Jogo Favorito em Destaque:", self.favorite_combo)
@@ -63,24 +70,39 @@ class EditProfileDialog(QDialog):
         button_layout.addWidget(save_button)
         main_layout.addLayout(button_layout)
 
-    def populate_favorites_combo(self):
-        self.favorite_combo.addItem("Nenhum", None) # Opção para não exibir nenhum
+    def populate_countries_combo(self):
+        """Popula o ComboBox com uma lista de países e seleciona o atual."""
+        self.country_combo.addItem("Não especificado", None) # Opção padrão
         
+        # Gera uma lista de tuplas (Nome do País, Código do País)
+        countries = sorted([(country.name, country.alpha_2) for country in pycountry.countries])
+        
+        current_code = self.current_data.get("country_code")
+        
+        for i, (name, code) in enumerate(countries):
+            self.country_combo.addItem(name, code)
+            if code == current_code:
+                self.country_combo.setCurrentIndex(i + 1)
+
+    def populate_favorites_combo(self):
+        # ... (este método continua igual)
+        self.favorite_combo.addItem("Nenhum", None)
         favorite_games = self.game_manager.get_favorite_games()
         current_favorite_id = self.current_data.get("showcased_favorite_id")
-        
         for i, game in enumerate(favorite_games):
             self.favorite_combo.addItem(game['name'], game['id'])
             if game['id'] == current_favorite_id:
                 self.favorite_combo.setCurrentIndex(i + 1)
 
     def _select_avatar(self):
+        # ... (este método continua igual)
         file_path, _ = QFileDialog.getOpenFileName(self, "Selecionar Avatar", "", "Imagens (*.png *.jpg *.jpeg *.gif)")
         if file_path:
             self.new_avatar_path = file_path
             self.avatar_btn.setText(f"Avatar: {os.path.basename(file_path)}")
 
     def _select_background(self):
+        # ... (este método continua igual)
         file_path, _ = QFileDialog.getOpenFileName(self, "Selecionar Imagem de Fundo", "", "Imagens (*.png *.jpg *.jpeg)")
         if file_path:
             self.new_background_path = file_path
@@ -88,10 +110,11 @@ class EditProfileDialog(QDialog):
 
     def _save_changes(self):
         self.current_data["username"] = self.username_input.text()
+        self.current_data["real_name"] = self.real_name_input.text() # SALVA O NOVO CAMPO
+        self.current_data["country_code"] = self.country_combo.currentData() # SALVA O NOVO CAMPO
         self.current_data["bio"] = self.bio_input.toPlainText()
         self.current_data["avatar_path"] = self.new_avatar_path
         self.current_data["background_path"] = self.new_background_path
-        # Salva a ID do jogo selecionado no ComboBox
         self.current_data["showcased_favorite_id"] = self.favorite_combo.currentData()
 
         self.profile_manager.save_profile(self.current_data)

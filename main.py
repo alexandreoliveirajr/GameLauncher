@@ -7,11 +7,10 @@ from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import QFileSystemWatcher
 
 from gui.main_window import MainWindow
-from core.database import initialize_database
+from core.database import initialize_database, update_database_schema
 
-# --- NOSSO NOVO SISTEMA DE TEMAS ---
+# --- NOVO SISTEMA DE TEMAS ---
 THEME_COLORS = {
-    # Placeholders e seus valores de cor
     "{background}": "#1e1e1e",
     "{background-darker}": "#111111",
     "{card}": "#2e2e2e",
@@ -19,7 +18,6 @@ THEME_COLORS = {
     "{text-primary}": "#ffffff",
     "{text-secondary}": "#cccccc",
     "{accent}": "#4a90e2",
-    # Adicione outras cores aqui conforme necessário
 }
 
 def load_stylesheet(app):
@@ -47,6 +45,7 @@ def main():
     )
 
     initialize_database()
+    update_database_schema()
 
     logging.info("Iniciando a aplicação Game Launcher...")
 
@@ -54,8 +53,6 @@ def main():
     
     load_stylesheet(app)
 
-    # Monitor de arquivos para recarregamento automático
-    # Ele agora só precisa observar um arquivo!
     watcher = QFileSystemWatcher(["styles/main.qss"])
     watcher.fileChanged.connect(lambda: load_stylesheet(app))
 

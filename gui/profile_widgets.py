@@ -12,14 +12,15 @@ class StatBox(QWidget):
         
         layout = QVBoxLayout(self)
         layout.setContentsMargins(20, 15, 20, 15)
-        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.value_label = QLabel(str(value))
+        self.value_label.setObjectName("StatValue")
+        self.value_label.setAlignment(Qt.AlignmentFlag.AlignCenter) 
         
         self.title_label = QLabel(title.upper())
+        self.title_label.setObjectName("StatTitle")
+        self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         layout.addWidget(self.value_label)
         layout.addWidget(self.title_label)
-        
-        self.setAutoFillBackground(True)
         

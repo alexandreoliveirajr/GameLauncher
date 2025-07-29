@@ -59,7 +59,11 @@ QFrame#GameCard:hover { border-color: #8A4DFF; }
 #StatItem { background-color: rgba(0, 0, 0, 0.2); border-radius: 8px; }
 #StatIcon { background-color: transparent; }
 #StatTitle { background-color: transparent; color: {text-secondary}; font-size: 11px; font-weight: bold; }
-#StatValue { background-color: transparent; color: {text-primary}; font-size: 16px; font-weight: bold; }
+#StatValue { background-color: transparent; color: {text-primary}; font-size: 26px; font-weight: bold;  }
+#ShowcaseCardInfoFrame {
+    background-color: rgba(30, 30, 30, 0.9); /* Fundo semi-transparente SÓ para a área de info */
+    min-height: 90px;
+}
 
 /* --- BOTÕES DE AÇÃO (PÁGINA DO JOGO) --- */
 
@@ -106,6 +110,114 @@ QScrollBar::handle:vertical { background-color: #4C566A; min-height: 30px; borde
 QScrollBar::handle:vertical:hover { background-color: #5E81AC; }
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { border: none; background: none; height: 0; }
 QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: none; }
+
+/* --- ESTILOS DA TELA DE PERFIL (POLIMENTO) --- */
+
+/* Remove o fundo da área de scroll para vermos o background com blur */
+#ProfileScrollArea {
+    background-color: transparent;
+    border: none;
+}
+/* O widget interno da área de scroll também precisa ser transparente */
+#ProfileScrollArea > QWidget {
+    background-color: transparent;
+}
+
+/* Painéis de Conteúdo com semi-transparência */
+#ProfileHeaderPanel, #ProfileShowcasePanel, #ProfileStatsPanel {
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+/* Cabeçalho com fundo mais "denso" para legibilidade */
+#ProfileHeaderPanel {
+    background-color: rgba(30, 30, 30, 0.85); 
+    padding: 20px;
+}
+/* Outros painéis com fundo mais sutil */
+#ProfileShowcasePanel, #ProfileStatsPanel {
+    background-color: rgba(30, 30, 30, 0.6);
+    padding: 15px;
+}
+
+/* Títulos de Seção ("JOGOS EM DESTAQUE", "ESTATÍSTICAS") */
+#SectionTitle {
+    color: {text-primary};
+    font-size: 14px;
+    font-weight: bold;
+    text-transform: uppercase;
+    margin-bottom: 15px;
+    padding-left: 5px;
+}
+
+/* Moldura do Avatar */
+#AvatarFrame {
+    border: 3px solid #666;
+    border-radius: 8px; /* Cantos levemente arredondados para a moldura */
+    background-color: #333;
+}
+
+/* Textos do Cabeçalho */
+#ProfileUsername {
+    font-size: 36px;
+    font-weight: bold;
+}
+#ProfileRealName {
+    font-size: 18px;
+    color: {text-secondary};
+    margin-top: -5px; /* Puxa para mais perto do username */
+}
+#ProfileFlag {
+    margin-left: 15px;
+}
+
+/* Botão de Editar Perfil */
+#ProfileEditButton {
+    background-color: {card};
+    color: {text-secondary};
+    border: 1px solid {card-border};
+    border-radius: 5px;
+    padding: 8px 12px;
+    font-weight: bold;
+}
+#ProfileEditButton:hover {
+    background-color: #444;
+    color: {text-primary};
+    border-color: #666;
+}
+
+/* --- ESTILOS DOS NOVOS CARDS DE DESTAQUE --- */
+
+#ShowcaseCard {
+    /* MUDANÇA: Remove o arredondamento dos cantos */
+    border-radius: 0px;
+    background-color: #111;
+    border: 1px solid transparent;
+}
+
+#ShowcaseCard:hover {
+    border: 1px solid {accent};
+}
+/* Imagem do card */
+#ShowcaseCardImage {
+    border-radius: 0px;
+}
+/* Títulos dentro do Card */
+#ShowcaseCardTitle {
+    font-size: 11px;
+    font-weight: bold;
+    color: {text-secondary};
+    text-transform: uppercase;
+}
+#ShowcaseCardGameName {
+    font-size: 20px;
+    font-weight: bold;
+    color: {text-primary};
+}
+#ShowcaseCardStatLabel {
+    font-size: 12px;
+    color: {text-secondary};
+    font-weight: bold;
+}
 
 /* --- OUTROS --- */
 #EmptyLibraryLabel { color: {text-secondary}; font-size: 20px; font-weight: bold; qproperty-alignment: 'AlignCenter'; padding: 100px; }

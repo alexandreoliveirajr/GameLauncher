@@ -43,21 +43,24 @@ class ProfileManager:
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Adiciona a coluna 'bio' à instrução UPDATE
         cursor.execute("""
             UPDATE profile SET
                 username = ?,
                 bio = ?, 
                 avatar_path = ?,
                 background_path = ?,
-                showcased_favorite_id = ?
+                showcased_favorite_id = ?,
+                real_name = ?,          -- NOVO CAMPO
+                country_code = ?        -- NOVO CAMPO
             WHERE id = 1
         """, (
             profile_data.get('username'),
-            profile_data.get('bio'), # <-- LINHA ADICIONADA
+            profile_data.get('bio'),
             profile_data.get('avatar_path'),
             profile_data.get('background_path'),
-            profile_data.get('showcased_favorite_id')
+            profile_data.get('showcased_favorite_id'),
+            profile_data.get('real_name'),   # NOVO CAMPO
+            profile_data.get('country_code') # NOVO CAMPO
         ))
         
         conn.commit()

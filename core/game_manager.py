@@ -284,3 +284,26 @@ class GameManager:
         rows = conn.execute("SELECT path FROM executables").fetchall()
         conn.close()
         return {os.path.normcase(row['path']) for row in rows}
+
+    def get_most_common_genre(self):
+        """Calcula o gênero mais comum entre todos os jogos na biblioteca."""
+        from collections import Counter
+
+        all_games = self.get_all_games()
+        if not all_games:
+            return "N/A"
+
+        genre_list = []
+        for game in all_games:
+            # Pega os gêneros, que podem ser 'None' ou uma string "Ação, RPG"
+            genres_str = game.get('genres')
+            if genres_str and isinstance(genres_str, str):
+                # Adiciona cada gênero individualmente à lista
+                genre_list.extend([genre.strip() for genre in genres_str.split(',')])
+
+        if not genre_list:
+            return "N/A"
+
+        # Conta a ocorrência de cada gênero e retorna o mais comum
+        most_common = Counter(genre_list).most_common(1)
+        return most_common[0][0]

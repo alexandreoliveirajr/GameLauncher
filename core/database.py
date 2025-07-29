@@ -93,3 +93,26 @@ def initialize_database():
     conn.commit()
     conn.close()
     logging.info("Banco de dados inicializado com sucesso.")
+
+def update_database_schema():
+    """Adiciona novas colunas a tabelas existentes de forma segura."""
+    logging.info("Verificando e atualizando o schema do banco de dados...")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute("ALTER TABLE profile ADD COLUMN real_name TEXT;")
+        logging.info("Coluna 'real_name' adicionada à tabela 'profile'.")
+    except sqlite3.OperationalError as e:
+        if "duplicate column name" not in str(e):
+            raise
+
+    try:
+        cursor.execute("ALTER TABLE profile ADD COLUMN country_code TEXT;")
+        logging.info("Coluna 'country_code' adicionada à tabela 'profile'.")
+    except sqlite3.OperationalError as e:
+        if "duplicate column name" not in str(e):
+            raise
+
+    conn.commit()
+    conn.close()
