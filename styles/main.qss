@@ -7,8 +7,8 @@ QToolTip { background-color: {background-darker}; color: {text-primary}; border:
 
 /* --- LAYOUT PRINCIPAL (MAIN WINDOW) --- */
 #LeftSidebar { background-color: #2C2D30; }
-#RightContentArea { background-color: {background}; padding: 25px 35px; }
-#RightContentArea[fullBleed="true"] { padding: 0px; }
+#RightContentArea { background-color: {background};}
+
 #LogoLabel { color: {text-primary}; font-size: 20px; font-weight: bold; padding-bottom: 20px; background-color: transparent; letter-spacing: 2px; }
 #SearchInput { background-color: #2C2D30; color: {text-primary}; border: 1px solid #3A3B3E; border-radius: 8px; padding: 8px 15px; font-size: 14px; }
 #SearchInput:focus { border-color: #8A4DFF; }

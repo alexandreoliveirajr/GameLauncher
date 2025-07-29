@@ -1,4 +1,4 @@
-# gui/game_page_widget.py (ABORDAGEM FINAL)
+# gui/game_page_widget.py
 
 import os
 from datetime import datetime
@@ -12,7 +12,8 @@ from utils.path_utils import get_absolute_path
 
 class GamePageWidget(QWidget):
     back_clicked = pyqtSignal()
-
+    
+    # ... (o __init__ e o paintEvent continuam os mesmos) ...
     def __init__(self, game_data, game_manager, game_launcher, main_window_ref, parent=None):
         super().__init__(parent)
         self.setObjectName("GamePage")
@@ -25,7 +26,6 @@ class GamePageWidget(QWidget):
         self.load_game_data(self.game_data)
 
     def paintEvent(self, event):
-        # Este método está funcionando perfeitamente.
         painter = QPainter(self)
         if self.background_pixmap and not self.background_pixmap.isNull():
             target_rect = self.rect()
@@ -39,6 +39,7 @@ class GamePageWidget(QWidget):
         super().paintEvent(event)
 
     def _setup_ui(self):
+        # ... (início do _setup_ui continua o mesmo)
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
@@ -56,40 +57,34 @@ class GamePageWidget(QWidget):
         content_layout = QHBoxLayout(content_container)
         content_layout.setContentsMargins(35, 20, 35, 20)
         content_layout.setSpacing(35)
-        
         left_column = QVBoxLayout(); left_column.setSpacing(15)
         self.cover_label = QLabel()
         self.cover_label.setObjectName("GameCoverImage")
         self.cover_label.setMaximumWidth(320)
         self.cover_label.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        
         self.play_button = QPushButton("▶ JOGAR"); self.play_button.setObjectName("LargePlayButton")
+        # --- ADIÇÃO 1: Conecta o clique do botão ao novo método ---
+        self.play_button.clicked.connect(self._launch_game)
         
         action_buttons_layout = QHBoxLayout()
-        
-        # --- MUDANÇA PRINCIPAL AQUI ---
-        # Removemos o objectName e usamos uma propriedade de "classe" para o estilo
         self.fav_button = QPushButton("Favoritar")
         self.fav_button.setObjectName("FavoriteActionButton")
         self.fav_button.setCheckable(True)
-        
         self.edit_button = QPushButton("Editar"); self.edit_button.setObjectName("ActionButton")
         self.delete_button = QPushButton("Excluir"); self.delete_button.setObjectName("DeleteButton")
-        
         action_buttons_layout.addWidget(self.fav_button)
         action_buttons_layout.addWidget(self.edit_button)
         action_buttons_layout.addWidget(self.delete_button)
-        
         self.fav_button.clicked.connect(self._toggle_favorite)
         self.edit_button.clicked.connect(self._edit_game)
         self.delete_button.clicked.connect(self._delete_game)
-        
         left_column.addWidget(self.cover_label)
         left_column.addWidget(self.play_button)
         left_column.addLayout(action_buttons_layout)
         left_column.addStretch()
-        
-        # O resto do _setup_ui continua igual...
         right_column = QVBoxLayout()
+        # ... (o resto do _setup_ui continua igual)
         self.title_label = QLabel(); self.title_label.setObjectName("GameTitleLabel"); self.title_label.setWordWrap(True)
         self.genres_layout = QHBoxLayout(); self.genres_layout.setObjectName("GenresLayout"); self.genres_layout.setSpacing(10)
         self.stats_layout = QHBoxLayout(); self.stats_layout.setObjectName("StatsLayout")
@@ -105,8 +100,25 @@ class GamePageWidget(QWidget):
         main_layout.addWidget(top_bar)
         main_layout.addWidget(content_area, 1)
 
+    def _launch_game(self):
+        """Lança o primeiro executável do jogo atual."""
+        paths = self.game_data.get("paths", [])
+        if not paths:
+            self.main_window_ref.show_message_box("Erro", "Este jogo não tem um executável configurado.", "warning")
+            return
+
+        executable_path = paths[0]['path']
+        
+        result, data = self.game_launcher.launch_game(self.game_data, executable_path)
+
+        if isinstance(result, str) and result == "error":
+            self.main_window_ref.show_message_box("Erro ao Iniciar", data, "warning")
+        elif isinstance(result, str) and result == "running":
+            self.main_window_ref.show_message_box("Aviso", "Este jogo já está em execução.", "info")
+        else:
+            self.main_window_ref.start_tracking_game(result, data)
+
     def _create_stat_widget(self, icon_path, title_text, value_text):
-        # Este método está funcionando perfeitamente
         stat_widget = QWidget()
         stat_widget.setObjectName("StatItem")
         stat_layout = QHBoxLayout(stat_widget)
@@ -132,8 +144,6 @@ class GamePageWidget(QWidget):
 
     def load_game_data(self, game_data):
         self.game_data = game_data
-        
-        # ... (carregamento do fundo e capa continuam os mesmos)
         bg_path_raw = self.game_data.get("background") or self.game_data.get("image")
         bg_path_abs = get_absolute_path(bg_path_raw)
         if bg_path_abs and os.path.exists(bg_path_abs): self.background_pixmap = QPixmap(bg_path_abs)
@@ -152,13 +162,10 @@ class GamePageWidget(QWidget):
         else:
             self.cover_label.setText("Sem Capa")
             self.cover_label.setFixedSize(self.cover_label.maximumWidth(), int(self.cover_label.maximumWidth() * 1.5))
-        
         is_favorite = self.game_data.get("favorite", False)
-        
         self.fav_button.setIcon(QIcon("assets/icons/star.svg"))
         self.fav_button.setText(" Favorito" if is_favorite else " Favoritar")
-        self.fav_button.setChecked(is_favorite) # Define o estado de "marcado" do botão
-        
+        self.fav_button.setChecked(is_favorite)
         while self.stats_layout.count():
             item = self.stats_layout.takeAt(0)
             if item and item.widget(): item.widget().deleteLater()
@@ -173,7 +180,7 @@ class GamePageWidget(QWidget):
                 last_play_dt = datetime.fromisoformat(last_play_iso)
                 last_play_str = last_play_dt.strftime("%d/%m/%Y")
             except (ValueError, TypeError): last_play_str = "Data Inválida"
-        last_played_widget = self._create_stat_widget("assets/icons/calendar.svg", "Última Vez", last_play_str) # Ícone corrigido
+        last_played_widget = self._create_stat_widget("assets/icons/calendar.svg", "Última Vez", last_play_str)
         self.stats_layout.addWidget(last_played_widget)
         source = self.game_data.get('source', 'local')
         platform_icon_path = f"assets/icons/platform/{source.lower()}.svg"

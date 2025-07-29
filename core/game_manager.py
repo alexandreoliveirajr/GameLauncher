@@ -41,16 +41,20 @@ class GameManager:
         conn.close()
         return executables
     
-    # Unificamos a query base para evitar inconsistências
-    def _get_base_game_query_fields(self):
-        return """
-            id, name, source, app_id, igdb_id, summary, genres, release_date,
-            cover_url, screenshot_urls,
-            image_path as image, 
-            background_path as background, 
-            header_path, 
-            favorite, total_playtime, last_play_time
-        """
+    def _get_base_game_query_fields(self, alias=None):
+        """Retorna a string de campos base, opcionalmente com um alias de tabela."""
+        fields = [
+            "id", "name", "source", "app_id", "igdb_id", "summary", "genres", 
+            "release_date", "cover_url", "screenshot_urls", 
+            "image_path as image", "background_path as background", 
+            "header_path", "favorite", "total_playtime", "last_play_time"
+        ]
+        
+        if alias:
+            # Adiciona o prefixo "alias." a cada campo
+            return ", ".join([f"{alias}.{field}" for field in fields])
+        else:
+            return ", ".join(fields)
 
     def add_game(self, name, paths, image_path=None, background_path=None, header_path=None, tags=None, source='local', app_id=None):
         conn = get_db_connection()
@@ -191,20 +195,35 @@ class GameManager:
 
     def get_filtered_games(self, search_text, tag=None, sort_by="Nome (A-Z)"):
         conn = get_db_connection()
-        fields = self._get_base_game_query_fields()
-        query = f"SELECT {fields} FROM games"
-        params = []
+        fields = self._get_base_game_query_fields(alias='g')
         
+        query = f"""
+            SELECT DISTINCT {fields}
+            FROM games g
+            LEFT JOIN game_tags gt ON g.id = gt.game_id
+            LEFT JOIN tags t ON gt.tag_id = t.id
+        """
+        
+        conditions = []
+        params = []
+
         if search_text:
-            query += " WHERE name LIKE ?"
+            conditions.append("g.name LIKE ?")
             params.append(f"%{search_text}%")
         
+        if tag:
+            conditions.append("t.name = ?")
+            params.append(tag)
+
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
+        
         if sort_by == "Nome (A-Z)":
-            query += " ORDER BY name COLLATE NOCASE ASC"
+            query += " ORDER BY g.name COLLATE NOCASE ASC"
         elif sort_by == "Mais Jogado":
-            query += " ORDER BY total_playtime DESC"
+            query += " ORDER BY g.total_playtime DESC"
         elif sort_by == "Jogado Recentemente":
-            query += " ORDER BY last_play_time DESC"
+            query += " ORDER BY g.last_play_time DESC"
             
         rows = conn.execute(query, params).fetchall()
         conn.close()

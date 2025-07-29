@@ -55,7 +55,7 @@ class RecentTab(QWidget):
             spacer = QSpacerItem(20, 10, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
             hbox.addItem(spacer)
             play_btn = QPushButton("Detalhes")
-            play_btn.clicked.connect(lambda _, g=game: self._show_game_details(g))
+            play_btn.clicked.connect(lambda checked, g=game: self.main_window_ref.show_game_details(g))
             hbox.addWidget(play_btn)
             container = QWidget()
             container.setLayout(hbox)
@@ -66,7 +66,3 @@ class RecentTab(QWidget):
         scroll_area.setWidgetResizable(True)
         scroll_area.setWidget(recent_games_container)
         self.recent_layout.addWidget(scroll_area)
-
-    def _show_game_details(self, game):
-        dialog = GameDetailsDialog(game, self.game_manager, self.game_launcher, self.main_window_ref)
-        dialog.exec()
