@@ -17,9 +17,9 @@ from core.profile_manager import ProfileManager
 from core.settings_manager import SettingsManager
 
 from gui.game_display_widget import GameDisplayWidget
+from gui.game_page_widget import GamePageWidget
 from gui.add_game_tab import AddGameTab
 from gui.recent_favorites_tabs import RecentTab
-from gui.game_details_dialog import GameDetailsDialog
 from gui.profile_tab import ProfileTab
 from gui.import_tab import ImportTab
 
@@ -37,7 +37,10 @@ class MainWindow(QMainWindow):
         self.game_manager = GameManager()
         self.game_launcher = GameLauncher(self.game_manager)
         self.profile_manager = ProfileManager()
-        
+
+        self.current_game_page = None
+        self.last_view_widget = None
+ 
         self.running_games = {}
         self.playtime_tracker = QTimer(self)
         self.playtime_tracker.setInterval(15000)
@@ -153,8 +156,8 @@ class MainWindow(QMainWindow):
         self.stacked_widget.addWidget(self.recent_tab_widget)
         self.stacked_widget.addWidget(self.add_game_tab_widget)
         self.stacked_widget.addWidget(self.import_tab_widget)
+        self.stacked_widget.currentChanged.connect(self._on_page_changed)
         
-
         btn_library.clicked.connect(lambda: self.stacked_widget.setCurrentWidget(self.library_display))
         btn_profile.clicked.connect(lambda: self.stacked_widget.setCurrentWidget(self.profile_tab_widget))
         btn_favorites.clicked.connect(lambda: self.stacked_widget.setCurrentWidget(self.favorites_display))
@@ -162,6 +165,33 @@ class MainWindow(QMainWindow):
         btn_add_game.clicked.connect(lambda: self.stacked_widget.setCurrentWidget(self.add_game_tab_widget))
         btn_import.clicked.connect(lambda: self.stacked_widget.setCurrentWidget(self.import_tab_widget))
         self.refresh_views()
+        self._on_page_changed(self.stacked_widget.currentIndex())
+
+    def _on_page_changed(self, index):
+        """Chamado sempre que a página visível no QStackedWidget muda."""
+        current_widget = self.stacked_widget.widget(index)
+
+        # Verifica se a página atual é uma das que devem mostrar a busca
+        is_library_view = current_widget in [self.library_display, self.favorites_display]
+
+        self.search_input.setVisible(is_library_view)
+        self.view_options_btn.setVisible(is_library_view)
+        
+        # --- LÓGICA PARA O FUNDO 100% ---
+        # 1. Verifica se a página atual é a página de um jogo
+        is_game_page = isinstance(current_widget, GamePageWidget)
+        
+        # 2. Define a propriedade 'fullBleed' no container de conteúdo
+        #    O nome 'content_area' é o que você usa no seu código.
+        self.content_area.setProperty("fullBleed", is_game_page)
+        
+        # 3. Força a reaplicação do estilo para que a mudança seja visível
+        self.content_area.style().polish(self.content_area)
+        # ------------------------------------
+
+        # Lógica para atualizar a biblioteca ao navegar para ela
+        if is_library_view:
+            self.refresh_views()
 
     def start_tracking_game(self, process, game):
         if process and game:
@@ -267,9 +297,23 @@ class MainWindow(QMainWindow):
         menu.exec(self.view_options_btn.mapToGlobal(QPoint(0, self.view_options_btn.height())))
 
     def show_game_details(self, game):
-        dialog = GameDetailsDialog(game, self.game_manager, self.game_launcher, self)
-        dialog.exec()
-        self.refresh_views()
+        """Cria e navega para a página de detalhes de um jogo."""
+        # Se já houver uma página de jogo aberta, removemos antes de criar a nova
+        if self.current_game_page:
+            self.return_to_library_view()
+
+        # Guarda a referência da tela atual para sabermos para onde voltar
+        self.last_view_widget = self.stacked_widget.currentWidget()
+
+        # Cria a nova página do jogo
+        self.current_game_page = GamePageWidget(game, self.game_manager, self.game_launcher, self)
+        # Conecta o sinal do botão "Voltar" ao nosso método de retorno
+        self.current_game_page.back_clicked.connect(self.return_to_library_view)
+
+        # Adiciona a nova página ao nosso container de telas
+        self.stacked_widget.addWidget(self.current_game_page)
+        # Manda o container exibir a nova página
+        self.stacked_widget.setCurrentWidget(self.current_game_page)
 
     def refresh_views(self):
         logging.info("Atualizando todas as visualizações...")
@@ -292,14 +336,6 @@ class MainWindow(QMainWindow):
 
     # Em gui/main_window.py, dentro da classe MainWindow
 
-    def show_game_details(self, game):
-        """Cria e exibe a janela de detalhes para um jogo específico."""
-        dialog = GameDetailsDialog(game, self.game_manager, self.game_launcher, self)
-        dialog.exec()
-        # Atualizamos as views depois que o diálogo fecha, caso o usuário
-        # tenha favoritado, editado ou deletado o jogo.
-        self.refresh_views()
-
     def show_message_box(self, title, message, icon_type="info", buttons=QMessageBox.StandardButton.Ok):
         msg_box = QMessageBox(self)
         msg_box.setWindowTitle(title)
@@ -316,3 +352,15 @@ class MainWindow(QMainWindow):
 
         msg_box.setStandardButtons(buttons)
         return msg_box.exec()
+
+    def return_to_library_view(self):
+        """Volta para a tela da biblioteca ou favoritos."""
+        if self.last_view_widget:
+            self.stacked_widget.setCurrentWidget(self.last_view_widget)
+
+        if self.current_game_page:
+            self.stacked_widget.removeWidget(self.current_game_page)
+            self.current_game_page.deleteLater()
+            self.current_game_page = None
+
+        self.refresh_views()

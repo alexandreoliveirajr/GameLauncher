@@ -25,7 +25,7 @@ THEME_COLORS = {
 def load_stylesheet(app):
     """Lê o arquivo QSS, substitui os placeholders de cor e o aplica."""
     try:
-        with open("styles/main.qss", "r") as f:
+        with open("styles/main.qss", "r", encoding="utf-8") as f:
             style_sheet = f.read()
 
         # Itera sobre o dicionário de cores e substitui os placeholders

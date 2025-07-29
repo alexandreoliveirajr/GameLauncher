@@ -1,278 +1,111 @@
-/* styles/main.qss (NOVA VERSÃO COM PLACEHOLDERS) */
+/* styles/main.qss (ABORDAGEM FINAL COM SELETORES DE PROPRIEDADE) */
 
-QMainWindow, QWidget {
-    background-color: {background};
-    color: {text-primary};
-    font-family: 'Segoe UI', Arial, sans-serif;
-}
+/* --- ESTILO GLOBAL --- */
+QMainWindow, QWidget { background-color: {background}; color: {text-primary}; font-family: 'Segoe UI', Arial, sans-serif; }
+QScrollArea { background-color: transparent; border: none; }
+QToolTip { background-color: {background-darker}; color: {text-primary}; border: 1px solid {card-border}; padding: 5px; border-radius: 4px; }
 
-#DetailsGameTitle {
-    font-size: 34px;
-    font-weight: bold;
-    color: {text-primary};
-    background-color: transparent; /* Importante para sobrepor o fundo */
-}
+/* --- LAYOUT PRINCIPAL (MAIN WINDOW) --- */
+#LeftSidebar { background-color: #2C2D30; }
+#RightContentArea { background-color: {background}; padding: 25px 35px; }
+#RightContentArea[fullBleed="true"] { padding: 0px; }
+#LogoLabel { color: {text-primary}; font-size: 20px; font-weight: bold; padding-bottom: 20px; background-color: transparent; letter-spacing: 2px; }
+#SearchInput { background-color: #2C2D30; color: {text-primary}; border: 1px solid #3A3B3E; border-radius: 8px; padding: 8px 15px; font-size: 14px; }
+#SearchInput:focus { border-color: #8A4DFF; }
 
-#DetailsGamePlaytime {
-    font-size: 18px;
-    font-weight: bold;
-    color: {text-secondary};
-    margin-top: 10px;
-    margin-bottom: 10px;
-    background-color: transparent;
-}
-
-#LeftSidebar {
-    background-color: #2C2D30; /* Cor um pouco mais clara para diferenciar */
-}
-
-#RightContentArea {
-    /* Usamos a cor de fundo principal do nosso tema */
-    background-color: {background}; 
-    /* Adicionamos um padding generoso para dar "respiro" ao conteúdo */
-    padding: 25px 35px;
-}
-
-#LogoLabel {
-    color: {text-primary};
-    font-size: 20px; /* Um pouco menor */
-    font-weight: bold;
-    padding-bottom: 20px;
-    background-color: transparent; /* Garante que não tenha fundo */
-    letter-spacing: 2px; /* Aumenta o espaçamento entre as letras */
-}
-
-/* Estilo Básico para os botões da Sidebar */
-#LeftSidebar QPushButton {
-    background-color: transparent;
-    color: {text-secondary};
-    border: none;
-    padding: 12px 15px; /* Aumenta o padding lateral */
-    font-size: 14px;
-    text-align: left;
-    border-radius: 8px; /* Bordas mais arredondadas */
-    font-weight: bold; /* Fonte em negrito */
-}
-
-#LeftSidebar QPushButton:hover {
-    background-color: #3A3B3E;
-    color: {text-primary};
-}
-
-/* Estilo para o botão que está "ativo" (precisaremos de lógica para isso) */
-#LeftSidebar QPushButton:checked {
-    background-color: #4C566A; /* Um azul/cinza escuro */
-}
+/* --- BOTÕES DA SIDEBAR --- */
+#LeftSidebar QPushButton { background-color: transparent; color: {text-secondary}; border: none; padding: 12px 15px; font-size: 14px; text-align: left; border-radius: 8px; font-weight: bold; }
+#LeftSidebar QPushButton:hover { background-color: #3A3B3E; color: {text-primary}; }
+#LeftSidebar QPushButton:checked { background-color: #4C566A; }
 
 /* --- BOTÃO DE OPÇÕES DE EXIBIÇÃO --- */
-#ViewOptionsButton {
-    background-color: #2C2D30;
-    border: 1px solid #3A3B3E;
-    border-radius: 8px;
-}
-#ViewOptionsButton:hover {
-    background-color: #3A3B3E;
-}
+#ViewOptionsButton { background-color: #2C2D30; border: 1px solid #3A3B3E; border-radius: 8px; }
+#ViewOptionsButton:hover { background-color: #3A3B3E; }
 
-/* --- ESTILO DOS CARDS DE JOGO --- */
-#GameCard { /* O AnimatedGameCard em si */
-    background-color: transparent;
-    border: none;
-    color: {text-secondary};
-}
+/* --- BIBLIOTECA: MODO GRADE --- */
+QFrame#GameCard { background-color: {card}; border: 1px solid {card-border}; }
+QFrame#GameCard:hover { border-color: #8A4DFF; }
+#GameCardImage { background-color: #1E1F22; border-top-left-radius: 7px; border-top-right-radius: 7px; }
+#GameCardTextContainer { border-top: 1px solid {card-border}; }
+#GameCardName { color: {text-secondary}; font-weight: bold; font-size: 14px; background: transparent; }
+#GameCard:hover #GameCardName { color: {text-primary}; }
+#PlatformIcon { background-color: transparent; }
 
-#GameCard:hover {
-    color: {text-primary};
-}
+/* --- BIBLIOTECA: MODO LISTA --- */
+#GameListItem { background-color: {card}; border: 1px solid {card-border}; border-radius: 0px; }
+#GameListItem:hover { border-color: {accent}; }
+#GameListItem QLabel { background: transparent; }
+#GameListItemImage { border-radius: 0px; }
+#GameListItemName { color: {text-primary}; font-size: 16px; font-weight: bold; }
+#GameListItemPlaytime { color: {text-secondary}; }
+#GameListItem #PlayButton { background-color: {accent}; color: {text-primary}; font-weight: bold; border-radius: 5px; font-size: 14px; border: 1px solid #A06FFF; }
+#GameListItem #PlayButton:hover { background-color: #9B6BFF; }
+#GameListItem #PlayButton:pressed { background-color: #7A3DDF; border-color: #7A3DDF; }
 
-/* --- ESTILO DOS ITENS DA LISTA DE JOGOS --- */
-#GameListItem {
-    background-color: {card};
-    border: 1px solid {card-border};
-    border-radius: 8px;
-}
+/* --- ESTILO DA PÁGINA DE JOGO (REFINADO) --- */
+#GamePage { background-color: #141518; }
+#GamePage #TopBar, #GamePage #ContentArea, #GamePageContentContainer { background-color: transparent; border: none; }
+#GamePage #BackButton { background-color: rgba(44, 45, 48, 0.8); color: {text-primary}; font-weight: bold; font-size: 14px; border: 1px solid #3A3B3E; border-radius: 8px; padding: 10px 15px; }
+#GamePage #BackButton:hover { background-color: #3A3B3E; }
+#GamePage #GameCoverImage { border-radius: 8px; color: {text-secondary}; }
+#LargePlayButton { background-color: #2A8C4A; color: #FFFFFF; font-size: 20px; font-weight: bold; border-radius: 8px; padding: 15px; border: 1px solid #36b558; }
+#LargePlayButton:hover { background-color: #38A959; }
+#GameTitleLabel { color: {text-primary}; font-size: 48px; font-weight: bold; margin-bottom: 5px; background-color: transparent; }
+#GenreTag { color: {text-primary}; background-color: rgba(67, 68, 72, 0.7); border-radius: 12px; padding: 5px 12px; font-size: 12px; font-weight: bold; }
+#SectionTitleLabel { color: {text-secondary}; font-size: 12px; font-weight: bold; text-transform: uppercase; margin-top: 25px; margin-bottom: 10px; background-color: transparent; }
+#GameSummaryText { background-color: transparent; color: {text-secondary}; border: none; font-size: 16px; }
 
-/* Efeito ao passar o mouse */
-#GameListItem:hover {
-    border: 1px solid {accent};
-}
+/* --- Estilos dos Blocos de Stats --- */
+#StatItem { background-color: rgba(0, 0, 0, 0.2); border-radius: 8px; }
+#StatIcon { background-color: transparent; }
+#StatTitle { background-color: transparent; color: {text-secondary}; font-size: 11px; font-weight: bold; }
+#StatValue { background-color: transparent; color: {text-primary}; font-size: 16px; font-weight: bold; }
 
-/* Estilo dos textos dentro do item */
-#GameListItem QLabel {
-    background-color: transparent; /* Garante que não tenham fundo próprio */
-    border: none;
-}
+/* --- BOTÕES DE AÇÃO (PÁGINA DO JOGO) --- */
 
-/* Estilo do botão "Jogar" dentro do item */
-#GameListItem QPushButton {
-    background-color: {accent-success};
-    color: {text-primary};
-    font-size: 14px;
-    font-weight: bold;
+/* Botão de Editar (Genérico) */
+#ActionButton { background-color: #434448; color: {text-primary}; border-radius: 5px; padding: 10px; font-weight: bold; border: 1px solid #555; }
+#ActionButton:hover { background-color: #55575c; border-color: #777; }
+
+/* Botão de Excluir */
+#DeleteButton { background-color: #434448; color: {text-primary}; border-radius: 5px; padding: 10px; font-weight: bold; border: 1px solid #555; }
+#DeleteButton:hover { background-color: #BF616A; border-color: #D08770;}
+
+/* --- NOVA SEÇÃO DE ESTILO PARA O BOTÃO DE FAVORITAR --- */
+/* Estilo padrão para o botão de favoritar (não-favorito) */
+
+#FavoriteActionButton {
+    background-color: #434448;
+    color: #ffffff;
     border-radius: 5px;
-    padding: 8px 15px;
-}
-#GameListItem QPushButton:hover {
-    background-color: {accent-success-hover};
-}
-
-QScrollArea {
-    background-color: transparent;
-    border: none;
-}
-
-/* --- ESTILO DOS CARDS DE JOGO NA GRADE (VERSÃO FINAL PROFISSIONAL) --- */
-
-QFrame#GameCard {
-    background-color: {card};
-    border: 1px solid {card-border};
-    
-}
-
-QFrame#GameCard:hover {
-    border-color: #8A4DFF;
-}
-
-/* A área da imagem (QLabel) */
-#GameCardImage {
-    background-color: #1E1F22; /* Fundo bem escuro para o letterbox */
-}
-
-
-/* A área do nome (QLabel) */
-#GameCardName {
-    color: {text-secondary};
+    padding: 10px;
     font-weight: bold;
-    font-size: 14px;
+    border: 1px solid #555;
+}
+#FavoriteActionButton:hover {
+    background-color: #55575c;
+    border-color: #777;
 }
 
-#PlatformIcon {
-    /* O ícone já é carregado da imagem, não precisa de muito estilo */
-    background-color: transparent;
+/* Estilo para quando o botão está MARCADO (:checked) */
+#FavoriteActionButton:checked {
+    background-color: #443B1F; /* Fundo dourado */
+    border-color: #D08770;     /* Borda laranja */
+    color: #EBCB8B;            /* Texto e ícone amarelos */
 }
-
-#GameCardTextContainer {
-    border-top: 1px solid {card-border};
-}
-
-/* O nome do jogo */
-#GameCardName {
-    font-weight: bold;
-    font-size: 14px;
-    background: transparent;
-    color: {text-primary};
+/* Estilo para o hover quando o botão está MARCADO */
+#FavoriteActionButton:checked:hover {
+    background-color: #584A25;
+    border-color: #EBCB8B;
 }
 
 /* --- ESTILO DA BARRA DE ROLAGEM --- */
-QScrollBar:vertical {
-    border: none;
-    background-color: #2C2D30; /* Fundo do trilho */
-    width: 14px;
-    margin: 1px 0 1px 0;
-}
+QScrollBar:vertical { border: none; background-color: {background}; width: 14px; margin: 1px 0 1px 0; }
+QScrollBar::groove:vertical { background-color: #2C2D30; border-radius: 7px; }
+QScrollBar::handle:vertical { background-color: #4C566A; min-height: 30px; border-radius: 7px; border: 1px solid #3A3B3E; }
+QScrollBar::handle:vertical:hover { background-color: #5E81AC; }
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { border: none; background: none; height: 0; }
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: none; }
 
-/* O cabo que o usuário arrasta */
-QScrollBar::handle:vertical {
-    background-color: #4C566A; /* Um cinza-azulado para destaque */
-    min-height: 30px;
-    border-radius: 7px;
-    border: 1px solid #3A3B3E; /* Borda sutil para profundidade */
-}
-
-QScrollBar::handle:vertical:hover {
-    background-color: #5E81AC; /* Cor mais clara no hover */
-}
-
-/* Esconde as setas e remove o fundo das páginas */
-QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-    height: 0;
-    background: none;
-}
-QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
-    background: none;
-}
-
-/* Estilo do Campo de Busca */
-#SearchInput {
-    background-color: #2C2D30;
-    color: {text-primary};
-    border: 1px solid #3A3B3E;
-    border-radius: 8px;
-    padding: 8px 15px;
-    font-size: 14px;
-}
-
-#SearchInput:focus {
-    border-color: #8A4DFF; /* Cor de destaque roxa */
-}
-
-/* --- ESTILO DOS ITENS DA LISTA (VERSÃO REFINADA) --- */
-
-#GameListItem {
-    background-color: {card};
-    border: 1px solid {card-border};
-    border-radius: 0px; /* Cantos quadrados para consistência */
-}
-#GameListItem:hover {
-    border-color: {accent};
-}
-
-#GameListItem QLabel { background: transparent; }
-
-#GameListItemImage {
-    border-radius: 0px; /* Cantos quadrados para consistência */
-}
-
-#GameListItemName {
-    color: {text-primary};
-    font-size: 16px;
-    font-weight: bold;
-}
-#GameListItemPlaytime {
-    color: {text-secondary};
-}
-
-/* Botão "Jogar" com mais destaque e feedback */
-#GameListItem #PlayButton {
-    background-color: {accent}; /* Cor de destaque roxa, mais chamativa */
-    color: {text-primary};
-    font-weight: bold;
-    border-radius: 5px;
-    font-size: 14px;
-    border: 1px solid #A06FFF; /* Borda sutil para mais profundidade */
-}
-#GameListItem #PlayButton:hover {
-    background-color: #9B6BFF; /* Tom mais claro */
-}
-#GameListItem #PlayButton:pressed {
-    background-color: #7A3DDF; /* Tom mais escuro ao pressionar (feedback tátil) */
-    border-color: #7A3DDF;
-}
-
-/* --- ESTILO DOS CARDS DE DESTAQUE DO PERFIL --- */
-#ShowcaseCard {
-    background-color: {card};
-    border-radius: 8px;
-}
-#ShowcaseCardImage {
-    border-radius: 6px;
-}
-#ShowcaseCardTitle {
-    color: {accent};
-    font-size: 12px;
-    font-weight: bold;
-}
-#ShowcaseCardGameName {
-    color: {text-primary};
-    font-size: 20px;
-    font-weight: bold;
-}
-
-/* --- ESTILO DA MENSAGEM DE BIBLIOTECA VAZIA --- */
-#EmptyLibraryLabel {
-    color: {text-secondary};
-    font-size: 20px;
-    font-weight: bold;
-    qproperty-alignment: 'AlignCenter'; /* Força a centralização */
-    padding: 100px; /* Adiciona um bom espaçamento ao redor */
-}
+/* --- OUTROS --- */
+#EmptyLibraryLabel { color: {text-secondary}; font-size: 20px; font-weight: bold; qproperty-alignment: 'AlignCenter'; padding: 100px; }

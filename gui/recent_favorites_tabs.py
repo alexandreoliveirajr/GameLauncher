@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QAction, QActionGroup, QIcon # E adicionado aqui
 from PyQt6.QtCore import Qt, QPoint, QSize
 from datetime import datetime
-from gui.game_details_dialog import GameDetailsDialog
+from gui.game_edit_dialog import GameEditDialog
 from gui.animated_card import AnimatedGameCard 
 from gui.list_item_widget import GameListItemWidget
 

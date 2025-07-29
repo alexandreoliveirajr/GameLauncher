@@ -40,6 +40,17 @@ class GameManager:
         executables = [{"path": row["path"], "display_name": row["display_name"]} for row in cursor.fetchall()]
         conn.close()
         return executables
+    
+    # Unificamos a query base para evitar inconsistências
+    def _get_base_game_query_fields(self):
+        return """
+            id, name, source, app_id, igdb_id, summary, genres, release_date,
+            cover_url, screenshot_urls,
+            image_path as image, 
+            background_path as background, 
+            header_path, 
+            favorite, total_playtime, last_play_time
+        """
 
     def add_game(self, name, paths, image_path=None, background_path=None, header_path=None, tags=None, source='local', app_id=None):
         conn = get_db_connection()
@@ -77,17 +88,39 @@ class GameManager:
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Atualiza a tabela 'games'
+        # --- LÓGICA DE GÊNEROS CORRIGIDA ---
+        genres_value = new_game_data.get('genres')
+
+        # Se 'genres' não veio nos dados novos, tenta pegar dos dados antigos
+        if genres_value is None:
+            genres_value = old_game_data.get('genres')
+
+        # Agora, processa o valor que encontramos
+        if isinstance(genres_value, list):
+            # Se for uma lista (veio do IGDB), junta em uma string
+            genres_to_save = ",".join(genres_value)
+        elif isinstance(genres_value, str):
+            # Se já for uma string (veio do DB), usa como está
+            genres_to_save = genres_value
+        else:
+            # Se for None ou outro tipo, salva como string vazia para evitar erros
+            genres_to_save = ""
+
         cursor.execute("""
             UPDATE games SET
-                name = ?, image_path = ?, background_path = ?, header_path = ?, source = ?
+                name = ?, image_path = ?, background_path = ?, header_path = ?, source = ?,
+                summary = ?, genres = ?, release_date = ?, igdb_id = ?
             WHERE id = ?
         """, (
-            new_game_data.get('name', old_game_data['name']),
+            new_game_data.get('name', old_game_data.get('name')),
             new_game_data.get('image', old_game_data.get('image')),
             new_game_data.get('background', old_game_data.get('background')),
             new_game_data.get('header', old_game_data.get('header')),
             new_game_data.get('source', old_game_data.get('source')),
+            new_game_data.get('summary', old_game_data.get('summary')),
+            genres_to_save,  # Usa nossa variável segura
+            new_game_data.get('release_date', old_game_data.get('release_date')),
+            new_game_data.get('igdb_id', old_game_data.get('igdb_id')),
             game_id
         ))
 
@@ -105,14 +138,11 @@ class GameManager:
         # Processa e insere as novas tags
         tags_list = new_game_data.get("tags", [])
         for tag_name in tags_list:
-            # Insere a tag na tabela 'tags' se ela não existir, e ignora se já existir
             cursor.execute("INSERT OR IGNORE INTO tags (name) VALUES (?)", (tag_name,))
-            # Pega o ID da tag (seja a que foi inserida ou a que já existia)
             cursor.execute("SELECT id FROM tags WHERE name = ?", (tag_name,))
             tag_row = cursor.fetchone()
             if tag_row:
                 tag_id = tag_row['id']
-                # Cria a associação na tabela 'game_tags'
                 cursor.execute("INSERT INTO game_tags (game_id, tag_id) VALUES (?, ?)", (game_id, tag_id))
 
         conn.commit()
@@ -127,15 +157,9 @@ class GameManager:
         cursor = conn.cursor()
 
         try:
-            # Deleta explicitamente as associações de tags
             cursor.execute("DELETE FROM game_tags WHERE game_id = ?", (game_id,))
-
-            # Deleta explicitamente os executáveis
             cursor.execute("DELETE FROM executables WHERE game_id = ?", (game_id,))
-
-            # Finalmente, deleta o jogo principal
             cursor.execute("DELETE FROM games WHERE id = ?", (game_id,))
-
             conn.commit()
             logging.info(f"Jogo ID {game_id} ('{game_to_delete['name']}') e seus dados associados foram deletados.")
             return True
@@ -145,39 +169,32 @@ class GameManager:
             return False
         finally:
             conn.close()
-
+    
     def get_all_games(self):
-        """Busca todos os jogos, usado para contagens e verificações internas."""
+        """Busca todos os jogos com todos os campos relevantes."""
         conn = get_db_connection()
-        rows = conn.execute("""
-            SELECT id, name, source, image_path as image, background_path as background, header_path,
-                   favorite, total_playtime, last_play_time
-            FROM games ORDER BY name COLLATE NOCASE ASC
-        """).fetchall()
+        fields = self._get_base_game_query_fields()
+        rows = conn.execute(f"SELECT {fields} FROM games ORDER BY name COLLATE NOCASE ASC").fetchall()
         conn.close()
-        return [dict(row) for row in rows]
+        return [self._game_from_row(row) for row in rows]
+
 
     def get_game_by_id(self, game_id):
-        """Busca um único jogo pelo seu ID no banco de dados."""
+        """Busca um único jogo pelo seu ID no banco de dados com todos os campos."""
         if not game_id:
             return None
         conn = get_db_connection()
-        row = conn.execute("""
-            SELECT id, name, source, image_path as image, background_path as background, header_path,
-                   favorite, total_playtime, last_play_time
-            FROM games WHERE id = ?
-        """, (game_id,)).fetchone()
+        fields = self._get_base_game_query_fields()
+        row = conn.execute(f"SELECT {fields} FROM games WHERE id = ?", (game_id,)).fetchone()
         conn.close()
         return self._game_from_row(row)
 
     def get_filtered_games(self, search_text, tag=None, sort_by="Nome (A-Z)"):
         conn = get_db_connection()
-        query = """
-            SELECT id, name, source, image_path as image, background_path as background, header_path,
-                   favorite, total_playtime, last_play_time
-            FROM games
-        """
+        fields = self._get_base_game_query_fields()
+        query = f"SELECT {fields} FROM games"
         params = []
+        
         if search_text:
             query += " WHERE name LIKE ?"
             params.append(f"%{search_text}%")
@@ -202,27 +219,20 @@ class GameManager:
 
     def get_favorite_games(self):
         conn = get_db_connection()
-        rows = conn.execute("""
-            SELECT id, name, source, image_path as image, background_path as background, header_path,
-                   favorite, total_playtime, last_play_time
-            FROM games WHERE favorite = 1 ORDER BY name COLLATE NOCASE ASC
-        """).fetchall()
+        fields = self._get_base_game_query_fields()
+        rows = conn.execute(f"SELECT {fields} FROM games WHERE favorite = 1 ORDER BY name COLLATE NOCASE ASC").fetchall()
         conn.close()
         return [self._game_from_row(row) for row in rows]
         
     def get_recent_games(self):
         conn = get_db_connection()
-        rows = conn.execute("""
-            SELECT id, name, source, image_path as image, background_path as background, header_path,
-                   favorite, total_playtime, last_play_time
-            FROM games WHERE last_play_time IS NOT NULL ORDER BY last_play_time DESC
-        """).fetchall()
+        fields = self._get_base_game_query_fields()
+        rows = conn.execute(f"SELECT {fields} FROM games WHERE last_play_time IS NOT NULL ORDER BY last_play_time DESC").fetchall()
         conn.close()
         return [self._game_from_row(row) for row in rows]
 
     def toggle_favorite(self, game):
         game_id = game['id']
-        # Converte o valor booleano para 0 ou 1
         new_fav_status = 1 if not game.get('favorite', False) else 0
         
         conn = get_db_connection()
@@ -232,7 +242,6 @@ class GameManager:
 
     def add_playtime(self, game_to_update, seconds_played):
         game_id = game_to_update['id']
-        # Garante que o playtime atual é um número
         current_playtime = game_to_update.get('total_playtime', 0) or 0
         new_total_playtime = current_playtime + seconds_played
 
@@ -252,8 +261,6 @@ class GameManager:
         conn.close()
 
     def get_all_executable_paths(self):
-        """Retorna um set com todos os caminhos de executáveis já existentes no DB,
-           TODOS NORMALIZADOS para comparação case-insensitive."""
         conn = get_db_connection()
         rows = conn.execute("SELECT path FROM executables").fetchall()
         conn.close()
