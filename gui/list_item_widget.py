@@ -48,7 +48,7 @@ class GameListItemWidget(QWidget):
         info_layout.setContentsMargins(0, 5, 0, 5)
         name_label = QLabel(self.game["name"])
         
-        playtime_seconds = self.game.get("total_playtime", 0)
+        playtime_seconds = self.game.get("playtime_local", 0)
         playtime_hours = playtime_seconds / 3600
         playtime_label = QLabel(f"{playtime_hours:.1f} horas jogadas")
         

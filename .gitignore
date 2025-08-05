@@ -6,7 +6,7 @@ __pycache__/
 *.pyc
 build/
 dist/
-game_artwork/
+steam/
 *.spec
 *.lnk # Atalhos do Windows
 *.bak # Arquivos de backup

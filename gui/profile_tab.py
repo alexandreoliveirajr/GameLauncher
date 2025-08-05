@@ -65,12 +65,12 @@ class ShowcaseCardWidget(QFrame):
         info_layout.addStretch()
 
         stats_layout = QHBoxLayout()
-        playtime_seconds = self.game.get("total_playtime", 0) or 0
+        playtime_seconds = self.game.get("playtime_local", 0) or 0
         playtime_hours = playtime_seconds / 3600
         stats_layout.addWidget(self._create_micro_stat("assets/icons/clock.svg", f"{playtime_hours:.1f}h"))
         
         last_play_str = "Nunca"
-        last_play_iso = self.game.get('last_play_time')
+        last_play_iso = self.game.get('last_played_timestamp')
         if last_play_iso:
             try: last_play_str = datetime.fromisoformat(last_play_iso).strftime("%d/%m/%y")
             except (ValueError, TypeError): last_play_str = "Data Inválida"
@@ -215,15 +215,15 @@ class ProfileTab(QWidget):
     def _populate_stats_and_showcase(self):
         self._clear_layout(self.showcase_layout); self._clear_layout(self.stats_layout)
         all_games = self.game_manager.get_all_games(); profile_data = self.profile_manager.get_data()
-        most_played = max(all_games, key=lambda g: g.get("total_playtime", 0)) if all_games else None
+        most_played = max(all_games, key=lambda g: g.get("playtime_local", 0)) if all_games else None
         showcased_favorite_id = profile_data.get("showcased_favorite_id"); showcased_favorite = self.game_manager.get_game_by_id(showcased_favorite_id) if showcased_favorite_id else None
         recent_games = self.game_manager.get_recent_games(); last_played = recent_games[0] if recent_games else None
         self.showcase_layout.addStretch(1)
         if showcased_favorite: self.showcase_layout.addWidget(ShowcaseCardWidget(showcased_favorite, "Jogo Favorito"))
-        if most_played and most_played.get("total_playtime", 0) > 0: self.showcase_layout.addWidget(ShowcaseCardWidget(most_played, "Mais Jogado"))
+        if most_played and most_played.get("playtime_local", 0) > 0: self.showcase_layout.addWidget(ShowcaseCardWidget(most_played, "Mais Jogado"))
         if last_played: self.showcase_layout.addWidget(ShowcaseCardWidget(last_played, "Último Jogo"))
         self.showcase_layout.addStretch(1)
-        total_playtime = sum(g.get("total_playtime", 0) for g in all_games); total_hours = total_playtime / 3600
+        playtime_local = sum(g.get("playtime_local", 0) for g in all_games); total_hours = playtime_local / 3600
         self.stats_layout.addStretch(1)
         self.stats_layout.addWidget(StatBox("HORAS TOTAIS", f"~{int(total_hours)}")); self.stats_layout.addWidget(StatBox("JOGOS NA BIBLIOTECA", str(len(all_games)))); self.stats_layout.addWidget(StatBox("GÊNERO FAVORITO", self.game_manager.get_most_common_genre())); self.stats_layout.addStretch(1)
     def edit_profile(self):

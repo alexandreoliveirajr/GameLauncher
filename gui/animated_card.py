@@ -1,4 +1,4 @@
-# gui/animated_card.py (VERSÃO FINAL COM LAYOUT HÍBRIDO E ALINHAMENTO PERFEITO)
+# gui/animated_card.py
 
 import os
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QGraphicsDropShadowEffect
@@ -30,24 +30,19 @@ class AnimatedGameCard(QFrame):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
 
-        # 1. ÁREA DA IMAGEM (continua igual)
         self.image_label = QLabel()
         self.image_label.setObjectName("GameCardImage")
         self.image_label.setFixedHeight(self.IMAGE_HEIGHT)
         self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        # 2. CONTAINER DA ÁREA DE TEXTO (continua igual)
         text_container = QFrame()
         text_container.setObjectName("GameCardTextContainer")
         text_container.setFixedHeight(self.TEXT_AREA_HEIGHT)
 
-        # --- NOVA LÓGICA DE LAYOUT INTERNO ---
-        # Usamos um layout vertical para centralizar nosso conteúdo na altura
         v_text_layout = QVBoxLayout(text_container)
-        v_text_layout.setContentsMargins(12, 0, 12, 0) # Padding horizontal
+        v_text_layout.setContentsMargins(12, 0, 12, 0)
         v_text_layout.setSpacing(0)
 
-        # Widget que vai segurar o nome e o ícone lado a lado
         content_widget = QWidget()
         h_content_layout = QHBoxLayout(content_widget)
         h_content_layout.setContentsMargins(0, 0, 0, 0)
@@ -55,7 +50,7 @@ class AnimatedGameCard(QFrame):
 
         self.name_label = QLabel(self.game["name"])
         self.name_label.setObjectName("GameCardName")
-        self.name_label.setWordWrap(True) # A quebra de linha continua funcionando
+        self.name_label.setWordWrap(True)
 
         self.platform_icon_label = QLabel()
         self.platform_icon_label.setObjectName("PlatformIcon")
@@ -65,29 +60,28 @@ class AnimatedGameCard(QFrame):
         h_content_layout.addWidget(self.name_label, 1)
         h_content_layout.addWidget(self.platform_icon_label)
 
-        # A MÁGICA DA CENTRALIZAÇÃO:
-        v_text_layout.addStretch(1) # 1. Adiciona um calço flexível em cima
-        v_text_layout.addWidget(content_widget) # 2. Adiciona nosso conteúdo
-        v_text_layout.addStretch(1) # 3. Adiciona um calço flexível embaixo
-        # ---------------------------
+        v_text_layout.addStretch(1)
+        v_text_layout.addWidget(content_widget)
+        v_text_layout.addStretch(1)
 
         main_layout.addWidget(self.image_label)
         main_layout.addWidget(text_container)
 
     def _update_platform_icon(self):
         source = self.game.get("source", "local").lower()
-
         icon_path = f"assets/icons/platform/{source}.svg"
-
         if not os.path.exists(icon_path):
             icon_path = "assets/icons/platform/local.svg"
-
         if os.path.exists(icon_path):
             self.platform_icon_label.setPixmap(QPixmap(icon_path))
             self.platform_icon_label.setScaledContents(True)
 
     def _load_and_scale_pixmap(self):
-        image_path = self.game.get("image")
+        # --- INÍCIO DA CORREÇÃO ---
+        # Trocado "image" por "image_path" para corresponder aos dados do GameManager
+        image_path = self.game.get("image_path")
+        # --- FIM DA CORREÇÃO ---
+        
         target_size = self.image_label.size()
 
         if target_size.width() == 0 or target_size.height() == 0: return
@@ -130,26 +124,24 @@ class AnimatedGameCard(QFrame):
         self.shadow.setColor(QColor(0, 0, 0, 160)); self.setGraphicsEffect(self.shadow)
 
     def _setup_animation(self):
-        # Posição e tamanho do card quando está em repouso dentro da "caixa invisível"
         self.rest_geometry = QRect(5, 5, self.CARD_WIDTH, self.CARD_HEIGHT)
-        # Posição e tamanho quando está "inflado"
         self.hover_geometry = QRect(0, 0, self.CARD_WIDTH + 10, self.CARD_HEIGHT + 10)
         
         self.animation = QPropertyAnimation(self, b"geometry")
-        self.animation.setDuration(120) # Um pouco mais rápido
+        self.animation.setDuration(120)
         self.animation.setEasingCurve(QEasingCurve.Type.OutQuad)
 
     def enterEvent(self, event):
         self.raise_()
         self.animation.stop()
         self.animation.setStartValue(self.geometry())
-        self.animation.setEndValue(self.hover_geometry) # Sempre anima para a posição de destaque exata
+        self.animation.setEndValue(self.hover_geometry)
         self.animation.start()
         super().enterEvent(event)
 
     def leaveEvent(self, event):
         self.animation.stop()
         self.animation.setStartValue(self.geometry())
-        self.animation.setEndValue(self.rest_geometry) # Sempre anima de volta para a posição de repouso exata
+        self.animation.setEndValue(self.rest_geometry)
         self.animation.start()
         super().leaveEvent(event)

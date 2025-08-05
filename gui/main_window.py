@@ -15,6 +15,8 @@ from core.game_manager import GameManager
 from core.game_launcher import GameLauncher
 from core.profile_manager import ProfileManager
 from core.settings_manager import SettingsManager
+from core.folder_scanner import SteamScanner, LocalGameScanner
+
 
 from gui.game_display_widget import GameDisplayWidget
 from gui.game_page_widget import GamePageWidget
@@ -386,3 +388,48 @@ class MainWindow(QMainWindow):
             self.current_game_page = None
 
         self.refresh_views()
+
+    def show_loading_overlay(self, text="Carregando..."):
+        """Mostra uma tela de carregamento sobre a janela principal."""
+        # Cria a label da overlay na primeira vez que for chamada
+        if not hasattr(self, 'loading_label'):
+            self.loading_label = QLabel(text, self)
+            self.loading_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            # Estilo para destacar a overlay
+            self.loading_label.setStyleSheet("""
+                background-color: rgba(0, 0, 0, 180);
+                color: white;
+                font-size: 24px;
+                font-weight: bold;
+                border-radius: 10px;
+            """)
+        
+        self.loading_label.setText(text)
+        # Garante que a overlay cubra o widget central da sua janela
+        # Se você não usa um 'central_widget', pode usar self.rect()
+        if hasattr(self, 'central_widget'):
+             self.loading_label.setGeometry(self.central_widget.rect())
+        else:
+             self.loading_label.setGeometry(self.rect())
+        
+        self.loading_label.raise_()
+        self.loading_label.show()
+
+    def hide_loading_overlay(self):
+        """Esconde a tela de carregamento."""
+        if hasattr(self, 'loading_label'):
+            self.loading_label.hide()
+    
+    def resizeEvent(self, event):
+        """
+        Este evento é chamado sempre que a janela é redimensionada.
+        Garante que a tela de carregamento também seja redimensionada.
+        """
+        # Chama a implementação original do evento
+        super().resizeEvent(event)
+        # Atualiza o tamanho da overlay se ela existir e estiver visível
+        if hasattr(self, 'loading_label') and self.loading_label.isVisible():
+            if hasattr(self, 'central_widget'):
+                 self.loading_label.setGeometry(self.central_widget.rect())
+            else:
+                 self.loading_label.setGeometry(self.rect())

@@ -41,7 +41,7 @@ class GameListItemWidget(QFrame):
         name_label = QLabel(self.game["name"])
         name_label.setObjectName("GameListItemName")
         
-        playtime_seconds = self.game.get("total_playtime", 0)
+        playtime_seconds = self.game.get("playtime_local", 0)
         playtime_hours = playtime_seconds / 3600
         playtime_label = QLabel(f"{playtime_hours:.1f} horas jogadas")
         playtime_label.setObjectName("GameListItemPlaytime")

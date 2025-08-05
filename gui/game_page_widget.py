@@ -2,18 +2,20 @@
 
 import os
 from datetime import datetime
+import webbrowser
+import subprocess
+import logging
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFrame, 
                              QTextEdit, QScrollArea, QMessageBox, QDialog, QSizePolicy)
 from PyQt6.QtGui import QPixmap, QColor, QPainter, QBrush, QIcon
-from PyQt6.QtCore import pyqtSignal, Qt, QPoint, QSize
+# Adicionado QTimer para o cooldown do botão
+from PyQt6.QtCore import pyqtSignal, Qt, QPoint, QSize, QTimer
 
 from gui.game_edit_dialog import GameEditDialog
 from utils.path_utils import get_absolute_path
 
 class GamePageWidget(QWidget):
     back_clicked = pyqtSignal()
-    
-    # ... (o __init__ e o paintEvent continuam os mesmos) ...
     def __init__(self, game_data, game_manager, game_launcher, main_window_ref, parent=None):
         super().__init__(parent)
         self.setObjectName("GamePage")
@@ -39,7 +41,6 @@ class GamePageWidget(QWidget):
         super().paintEvent(event)
 
     def _setup_ui(self):
-        # ... (início do _setup_ui continua o mesmo)
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
@@ -62,15 +63,10 @@ class GamePageWidget(QWidget):
         self.cover_label.setObjectName("GameCoverImage")
         self.cover_label.setMaximumWidth(320)
         self.cover_label.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
-        
         self.play_button = QPushButton("▶ JOGAR"); self.play_button.setObjectName("LargePlayButton")
-        # --- ADIÇÃO 1: Conecta o clique do botão ao novo método ---
-        self.play_button.clicked.connect(self._launch_game)
-        
+        self.play_button.clicked.connect(self.launch_game)
         action_buttons_layout = QHBoxLayout()
-        self.fav_button = QPushButton("Favoritar")
-        self.fav_button.setObjectName("FavoriteActionButton")
-        self.fav_button.setCheckable(True)
+        self.fav_button = QPushButton("Favoritar"); self.fav_button.setObjectName("FavoriteActionButton"); self.fav_button.setCheckable(True)
         self.edit_button = QPushButton("Editar"); self.edit_button.setObjectName("ActionButton")
         self.delete_button = QPushButton("Excluir"); self.delete_button.setObjectName("DeleteButton")
         action_buttons_layout.addWidget(self.fav_button)
@@ -84,7 +80,6 @@ class GamePageWidget(QWidget):
         left_column.addLayout(action_buttons_layout)
         left_column.addStretch()
         right_column = QVBoxLayout()
-        # ... (o resto do _setup_ui continua igual)
         self.title_label = QLabel(); self.title_label.setObjectName("GameTitleLabel"); self.title_label.setWordWrap(True)
         self.genres_layout = QHBoxLayout(); self.genres_layout.setObjectName("GenresLayout"); self.genres_layout.setSpacing(10)
         self.stats_layout = QHBoxLayout(); self.stats_layout.setObjectName("StatsLayout")
@@ -100,57 +95,68 @@ class GamePageWidget(QWidget):
         main_layout.addWidget(top_bar)
         main_layout.addWidget(content_area, 1)
 
-    def _launch_game(self):
-        """Lança o primeiro executável do jogo atual."""
-        paths = self.game_data.get("paths", [])
-        if not paths:
+    def launch_game(self):
+        executables = self.game_manager.get_executables_for_game(self.game_data['id'])
+        if not executables:
             self.main_window_ref.show_message_box("Erro", "Este jogo não tem um executável configurado.", "warning")
             return
+        executable_path = executables[0]['path']
+        try:
+            if executable_path.startswith("steam://"):
+                logging.info(f"Iniciando jogo da Steam via protocolo: {executable_path}")
+                webbrowser.open(executable_path)
+                self.game_manager.update_last_played(self.game_data['id'])
+                self.load_game_data(self.game_manager.get_game_by_id(self.game_data['id']))
+                
+                # --- INÍCIO DA CORREÇÃO ---
+                # Desabilita o botão e inicia um timer para reabilitá-lo após 5 segundos
+                self.play_button.setEnabled(False)
+                self.play_button.setText("INICIANDO...")
+                QTimer.singleShot(5000, self.enable_play_button) # 5000 ms = 5 segundos
+                # --- FIM DA CORREÇÃO ---
 
-        executable_path = paths[0]['path']
-        
-        result, data = self.game_launcher.launch_game(self.game_data, executable_path)
+            elif os.path.exists(executable_path):
+                logging.info(f"Iniciando executável local: {executable_path}")
+                result, data = self.game_launcher.launch_game(self.game_data, executable_path)
+                if isinstance(result, str) and result == "error": self.main_window_ref.show_message_box("Erro ao Iniciar", data, "warning")
+                elif isinstance(result, str) and result == "running": self.main_window_ref.show_message_box("Aviso", "Este jogo já está em execução.", "info")
+                else: self.main_window_ref.start_tracking_game(result, data)
+            else:
+                logging.error(f"Caminho do executável não encontrado: {executable_path}")
+                self.main_window_ref.show_message_box("Erro", f"O arquivo executável não foi encontrado em:\n{executable_path}", "error")
+        except Exception as e:
+            logging.error(f"Erro ao tentar iniciar o jogo em '{executable_path}': {e}")
+            self.main_window_ref.show_message_box("Erro", f"Ocorreu um erro inesperado ao iniciar o jogo:\n{e}", "error")
 
-        if isinstance(result, str) and result == "error":
-            self.main_window_ref.show_message_box("Erro ao Iniciar", data, "warning")
-        elif isinstance(result, str) and result == "running":
-            self.main_window_ref.show_message_box("Aviso", "Este jogo já está em execução.", "info")
-        else:
-            self.main_window_ref.start_tracking_game(result, data)
+    def enable_play_button(self):
+        """Função chamada pelo QTimer para reabilitar o botão de jogar."""
+        self.play_button.setEnabled(True)
+        self.play_button.setText("▶ JOGAR")
 
     def _create_stat_widget(self, icon_path, title_text, value_text):
-        stat_widget = QWidget()
-        stat_widget.setObjectName("StatItem")
-        stat_layout = QHBoxLayout(stat_widget)
-        stat_layout.setContentsMargins(10, 8, 10, 8)
-        stat_layout.setSpacing(10)
-        icon_label = QLabel()
-        icon_label.setObjectName("StatIcon")
-        if os.path.exists(icon_path):
-            icon_label.setPixmap(QPixmap(icon_path))
-        icon_label.setFixedSize(QSize(24, 24))
-        icon_label.setScaledContents(True)
-        text_layout = QVBoxLayout()
-        text_layout.setSpacing(0)
-        title_label = QLabel(title_text.upper())
-        title_label.setObjectName("StatTitle")
-        value_label = QLabel(value_text)
-        value_label.setObjectName("StatValue")
-        text_layout.addWidget(title_label)
-        text_layout.addWidget(value_label)
-        stat_layout.addWidget(icon_label)
-        stat_layout.addLayout(text_layout)
+        stat_widget = QWidget(); stat_widget.setObjectName("StatItem")
+        stat_layout = QHBoxLayout(stat_widget); stat_layout.setContentsMargins(10, 8, 10, 8); stat_layout.setSpacing(10)
+        icon_label = QLabel(); icon_label.setObjectName("StatIcon")
+        if os.path.exists(icon_path): icon_label.setPixmap(QPixmap(icon_path))
+        icon_label.setFixedSize(QSize(24, 24)); icon_label.setScaledContents(True)
+        text_layout = QVBoxLayout(); text_layout.setSpacing(0)
+        title_label = QLabel(title_text.upper()); title_label.setObjectName("StatTitle")
+        value_label = QLabel(value_text); value_label.setObjectName("StatValue")
+        text_layout.addWidget(title_label); text_layout.addWidget(value_label)
+        stat_layout.addWidget(icon_label); stat_layout.addLayout(text_layout)
         return stat_widget
 
     def load_game_data(self, game_data):
         self.game_data = game_data
-        bg_path_raw = self.game_data.get("background") or self.game_data.get("image")
+        bg_path_raw = self.game_data.get("background_path") or self.game_data.get("image_path")
+        cover_path_raw = self.game_data.get("image_path")
         bg_path_abs = get_absolute_path(bg_path_raw)
-        if bg_path_abs and os.path.exists(bg_path_abs): self.background_pixmap = QPixmap(bg_path_abs)
-        else: self.background_pixmap = None
+        if bg_path_abs and os.path.exists(bg_path_abs):
+            self.background_pixmap = QPixmap(bg_path_abs)
+        else:
+            self.background_pixmap = None
         self.update() 
         self.title_label.setText(self.game_data.get("name", "Nome Indisponível"))
-        cover_path_raw = self.game_data.get("image")
         cover_path_abs = get_absolute_path(cover_path_raw)
         if cover_path_abs and os.path.exists(cover_path_abs):
             pixmap = QPixmap(cover_path_abs)
@@ -169,22 +175,24 @@ class GamePageWidget(QWidget):
         while self.stats_layout.count():
             item = self.stats_layout.takeAt(0)
             if item and item.widget(): item.widget().deleteLater()
-        playtime_seconds = self.game_data.get("total_playtime", 0) or 0
+        playtime_seconds = self.game_data.get("playtime_local", 0) or 0
         playtime_hours = playtime_seconds / 3600
         playtime_widget = self._create_stat_widget("assets/icons/clock.svg", "Horas Jogadas", f"{playtime_hours:.1f}h")
         self.stats_layout.addWidget(playtime_widget)
         last_play_str = "Nunca"
-        last_play_iso = self.game_data.get('last_play_time')
-        if last_play_iso:
+        last_play_timestamp = self.game_data.get('last_played_timestamp')
+        if last_play_timestamp:
             try:
-                last_play_dt = datetime.fromisoformat(last_play_iso)
+                last_play_dt = datetime.fromtimestamp(last_play_timestamp)
                 last_play_str = last_play_dt.strftime("%d/%m/%Y")
-            except (ValueError, TypeError): last_play_str = "Data Inválida"
+            except (ValueError, TypeError):
+                last_play_str = "Data Inválida"
         last_played_widget = self._create_stat_widget("assets/icons/calendar.svg", "Última Vez", last_play_str)
         self.stats_layout.addWidget(last_played_widget)
         source = self.game_data.get('source', 'local')
         platform_icon_path = f"assets/icons/platform/{source.lower()}.svg"
-        if not os.path.exists(platform_icon_path): platform_icon_path = "assets/icons/platform/local.svg"
+        if not os.path.exists(platform_icon_path):
+            platform_icon_path = "assets/icons/platform/local.svg"
         platform_widget = self._create_stat_widget(platform_icon_path, "Plataforma", source.upper())
         self.stats_layout.addWidget(platform_widget)
         self.stats_layout.addStretch()
@@ -201,13 +209,13 @@ class GamePageWidget(QWidget):
         self.genres_layout.addStretch()
 
     def _toggle_favorite(self):
-        self.game_manager.toggle_favorite(self.game_data)
+        self.game_manager.toggle_favorite(self.game_data['id'])
         updated_game_data = self.game_manager.get_game_by_id(self.game_data["id"])
         self.load_game_data(updated_game_data)
         self.main_window_ref.refresh_views()
 
     def _edit_game(self):
-        dialog = GameEditDialog(self.game_data, self.game_manager, self.main_window_ref)
+        dialog = GameEditDialog(self.game_data['id'], self.game_manager, self.main_window_ref)
         if dialog.exec():
             updated_game_data = self.game_manager.get_game_by_id(self.game_data["id"])
             if updated_game_data:
@@ -217,5 +225,5 @@ class GamePageWidget(QWidget):
     def _delete_game(self):
         reply = self.main_window_ref.show_message_box("Confirmar Exclusão", f"Tem certeza que deseja excluir '{self.game_data['name']}'?","question", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
         if reply == QMessageBox.StandardButton.Yes:
-            self.game_manager.delete_game(self.game_data)
+            self.game_manager.delete_game(self.game_data['id'])
             self.back_clicked.emit()

@@ -8,6 +8,8 @@ from PyQt6.QtCore import QFileSystemWatcher
 
 from gui.main_window import MainWindow
 from core.database import initialize_database, update_database_schema
+from core.folder_scanner import SteamScanner
+from core.game_manager import GameManager
 
 # --- NOVO SISTEMA DE TEMAS ---
 THEME_COLORS = {
