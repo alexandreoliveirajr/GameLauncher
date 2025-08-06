@@ -1,19 +1,19 @@
-# gui/game_list_item_widget.py (VERSÃO APRIMORADA)
+# gui/game_list_item_widget.py
 
 import os
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QGraphicsDropShadowEffect
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QGraphicsColorizeEffect
 from PyQt6.QtGui import QPixmap, QColor, QIcon
 from PyQt6.QtCore import pyqtSignal, Qt, QSize, QPropertyAnimation, QRect, QEasingCurve
 
 class GameListItemWidget(QFrame):
-    details_clicked = pyqtSignal() # Sinal para abrir detalhes
-    play_clicked = pyqtSignal()    # Sinal para jogar
+    details_clicked = pyqtSignal()
+    play_clicked = pyqtSignal()
 
     def __init__(self, game, parent=None):
         super().__init__(parent)
         self.setObjectName("GameListItem")
         self.game = game
-        self.setFixedHeight(100) # Altura fixa para o item da lista
+        self.setFixedHeight(100)
         self._setup_ui()
         self._setup_animation()
 
@@ -22,21 +22,25 @@ class GameListItemWidget(QFrame):
         main_layout.setContentsMargins(10, 10, 20, 10)
         main_layout.setSpacing(15)
 
-        # --- Imagem Retangular (CORRIGIDO) ---
-        image_label = QLabel()
-        image_label.setObjectName("GameListItemImage")
-        image_label.setFixedSize(160, 75) # 1. Voltamos para um tamanho retangular
+        self.image_label = QLabel()
+        self.image_label.setObjectName("GameListItemImage")
+        self.image_label.setFixedSize(160, 75)
         
-        image_path = self.game.get("header_path") or self.game.get("image")
+        # --- INÍCIO DA ALTERAÇÃO ---
+        # Usa header_path como prioridade, depois image_path
+        image_path = self.game.get("header_path") or self.game.get("image_path")
         if image_path and os.path.exists(image_path):
-            # 2. Voltamos para KeepAspectRatioByExpanding para preencher o espaço
-            pixmap = QPixmap(image_path).scaled(image_label.size(), Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation)
-            image_label.setPixmap(pixmap)
+            pixmap = QPixmap(image_path).scaled(self.image_label.size(), Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation)
+            self.image_label.setPixmap(pixmap)
         else:
-            image_label.setText("Sem Arte")
-        main_layout.addWidget(image_label)
+            self.image_label.setText("Sem Arte")
+        
+        # Aplica o efeito de "cinza" se o jogo não estiver instalado
+        self._apply_status_effect()
+        # --- FIM DA ALTERAÇÃO ---
 
-        # --- O resto do método continua igual ---
+        main_layout.addWidget(self.image_label)
+
         info_layout = QVBoxLayout()
         name_label = QLabel(self.game["name"])
         name_label.setObjectName("GameListItemName")
@@ -51,20 +55,42 @@ class GameListItemWidget(QFrame):
         info_layout.addStretch()
         main_layout.addLayout(info_layout, 1)
 
-        play_btn = QPushButton(" Jogar")
-        play_btn.setObjectName("PlayButton")
-        play_btn.setIcon(QIcon("assets/icons/play.svg"))
-        play_btn.setIconSize(QSize(16, 16))
-        play_btn.setFixedSize(120, 45)
-        play_btn.clicked.connect(self.play_clicked.emit)
-        main_layout.addWidget(play_btn)
+        self.play_btn = QPushButton()
+        self.play_btn.setObjectName("PlayButton")
+        self.play_btn.setFixedSize(120, 45)
+        self.play_btn.clicked.connect(self.play_clicked.emit)
+        
+        # --- INÍCIO DA ALTERAÇÃO ---
+        # Muda o texto e o ícone do botão com base no status
+        is_installed = self.game.get("status", "UNINSTALLED") == "INSTALLED"
+        if is_installed:
+            self.play_btn.setText(" Jogar")
+            self.play_btn.setIcon(QIcon("assets/icons/play.svg"))
+            self.play_btn.setIconSize(QSize(16, 16))
+        else:
+            self.play_btn.setText(" Instalar")
+            self.play_btn.setIcon(QIcon("assets/icons/download.svg"))
+            self.play_btn.setIconSize(QSize(18, 18))
+        # --- FIM DA ALTERAÇÃO ---
+        
+        main_layout.addWidget(self.play_btn)
+
+    def _apply_status_effect(self):
+        """Aplica um efeito de escala de cinza se o jogo não estiver instalado."""
+        is_installed = self.game.get("status", "UNINSTALLED") == "INSTALLED"
+        if not is_installed:
+            effect = QGraphicsColorizeEffect()
+            effect.setColor(QColor(128, 128, 128))
+            effect.setStrength(0.8)
+            self.image_label.setGraphicsEffect(effect)
+        else:
+            self.image_label.setGraphicsEffect(None)
 
     def mousePressEvent(self, event):
-        # Verifica se o clique foi fora do botão "Jogar"
         play_button = self.findChild(QPushButton, "PlayButton")
         if not play_button or not play_button.geometry().contains(event.pos()):
             if event.button() == Qt.MouseButton.LeftButton:
-                self.details_clicked.emit() # Emite o sinal de detalhes
+                self.details_clicked.emit()
         super().mousePressEvent(event)
 
     def _setup_animation(self):

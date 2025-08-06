@@ -2,11 +2,14 @@ steam_app_list.json
 launcher.db
 *.db
 *.db-journal
+*.json
 __pycache__/
 *.pyc
 build/
 dist/
 steam/
+game_artwork/
+temp_previews/
 *.spec
 *.lnk # Atalhos do Windows
 *.bak # Arquivos de backup

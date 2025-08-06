@@ -8,7 +8,6 @@ import logging
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFrame, 
                              QTextEdit, QScrollArea, QMessageBox, QDialog, QSizePolicy)
 from PyQt6.QtGui import QPixmap, QColor, QPainter, QBrush, QIcon
-# Adicionado QTimer para o cooldown do botão
 from PyQt6.QtCore import pyqtSignal, Qt, QPoint, QSize, QTimer
 
 from gui.game_edit_dialog import GameEditDialog
@@ -96,10 +95,29 @@ class GamePageWidget(QWidget):
         main_layout.addWidget(content_area, 1)
 
     def launch_game(self):
+        # --- INÍCIO DA ALTERAÇÃO ---
+        # Verifica o status do jogo para decidir a ação
+        is_installed = self.game_data.get("status", "UNINSTALLED") == "INSTALLED"
+        source = self.game_data.get("source")
+        app_id = self.game_data.get("app_id")
+
+        # Se não estiver instalado e for da Steam, a ação é instalar
+        if not is_installed and source == 'steam' and app_id:
+            install_path = f"steam://install/{app_id}"
+            logging.info(f"Iniciando instalação do jogo da Steam via protocolo: {install_path}")
+            webbrowser.open(install_path)
+            # Desabilita o botão para evitar múltiplos cliques
+            self.play_button.setEnabled(False)
+            self.play_button.setText("ABRINDO STEAM...")
+            QTimer.singleShot(5000, self.enable_play_button)
+            return
+        # --- FIM DA ALTERAÇÃO ---
+
         executables = self.game_manager.get_executables_for_game(self.game_data['id'])
         if not executables:
             self.main_window_ref.show_message_box("Erro", "Este jogo não tem um executável configurado.", "warning")
             return
+        
         executable_path = executables[0]['path']
         try:
             if executable_path.startswith("steam://"):
@@ -107,14 +125,9 @@ class GamePageWidget(QWidget):
                 webbrowser.open(executable_path)
                 self.game_manager.update_last_played(self.game_data['id'])
                 self.load_game_data(self.game_manager.get_game_by_id(self.game_data['id']))
-                
-                # --- INÍCIO DA CORREÇÃO ---
-                # Desabilita o botão e inicia um timer para reabilitá-lo após 5 segundos
                 self.play_button.setEnabled(False)
                 self.play_button.setText("INICIANDO...")
-                QTimer.singleShot(5000, self.enable_play_button) # 5000 ms = 5 segundos
-                # --- FIM DA CORREÇÃO ---
-
+                QTimer.singleShot(5000, self.enable_play_button)
             elif os.path.exists(executable_path):
                 logging.info(f"Iniciando executável local: {executable_path}")
                 result, data = self.game_launcher.launch_game(self.game_data, executable_path)
@@ -129,9 +142,10 @@ class GamePageWidget(QWidget):
             self.main_window_ref.show_message_box("Erro", f"Ocorreu um erro inesperado ao iniciar o jogo:\n{e}", "error")
 
     def enable_play_button(self):
-        """Função chamada pelo QTimer para reabilitar o botão de jogar."""
+        """Função chamada pelo QTimer para reabilitar o botão principal."""
         self.play_button.setEnabled(True)
-        self.play_button.setText("▶ JOGAR")
+        # Recarrega os dados para garantir que o texto do botão esteja correto
+        self.load_game_data(self.game_data)
 
     def _create_stat_widget(self, icon_path, title_text, value_text):
         stat_widget = QWidget(); stat_widget.setObjectName("StatItem")
@@ -148,6 +162,19 @@ class GamePageWidget(QWidget):
 
     def load_game_data(self, game_data):
         self.game_data = game_data
+        
+        # --- INÍCIO DA ALTERAÇÃO ---
+        # Atualiza o texto e o ícone do botão com base no status do jogo
+        is_installed = self.game_data.get("status", "UNINSTALLED") == "INSTALLED"
+        if is_installed:
+            self.play_button.setText("▶ JOGAR")
+            self.play_button.setIcon(QIcon()) # Remove o ícone se houver
+        else:
+            self.play_button.setText(" INSTALAR")
+            self.play_button.setIcon(QIcon("assets/icons/download.svg"))
+            self.play_button.setIconSize(QSize(18, 18))
+        # --- FIM DA ALTERAÇÃO ---
+
         bg_path_raw = self.game_data.get("background_path") or self.game_data.get("image_path")
         cover_path_raw = self.game_data.get("image_path")
         bg_path_abs = get_absolute_path(bg_path_raw)

@@ -12,17 +12,26 @@ from core.igdb_api import IGDB_API, download_and_save_images
 from gui.igdb_search_dialog import IGDBSearchDialog
 
 class GameEditDialog(QDialog):
-    def __init__(self, game, game_manager, main_window_ref, parent=None):
+    def __init__(self, game_id, game_manager, main_window_ref, parent=None):
         super().__init__(parent)
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowType.WindowContextHelpButtonHint)
         
-        self.game = game
+        self.game_id = game_id
         self.game_manager = game_manager
         self.main_window_ref = main_window_ref
         self.igdb_api = IGDB_API()
         
-        self.current_edited_game = self.game.copy()
-        self.current_edited_game['paths'] = [p.copy() for p in self.game.get('paths', [])]
+        # --- INÍCIO DA CORREÇÃO ---
+        # 1. Busca os dados completos do jogo usando o ID recebido.
+        self.original_game_data = self.game_manager.get_game_by_id(self.game_id)
+        if not self.original_game_data:
+            # Medida de segurança caso o jogo não seja encontrado
+            raise ValueError(f"Jogo com ID {self.game_id} não encontrado no banco de dados.")
+
+        # 2. Cria uma cópia profunda dos dados para edição, evitando modificar o original.
+        self.current_edited_game = self.original_game_data.copy()
+        self.current_edited_game['paths'] = [p.copy() for p in self.original_game_data.get('paths', [])]
+        # --- FIM DA CORREÇÃO ---
 
         self.setWindowTitle(f"Editando: {self.current_edited_game['name']}")
         self.setMinimumWidth(500)
@@ -33,7 +42,6 @@ class GameEditDialog(QDialog):
         main_layout = QVBoxLayout(self)
         form_layout = QFormLayout()
 
-        # --- Campos de Texto ---
         self.name_input = QLineEdit(self.current_edited_game.get("name", ""))
         form_layout.addRow("Nome:", self.name_input)
 
@@ -41,7 +49,6 @@ class GameEditDialog(QDialog):
         self.tags_input = QLineEdit(tags_text)
         form_layout.addRow("Tags:", self.tags_input)
 
-        # --- Seletor de Plataforma ---
         self.source_combo = QComboBox()
         current_source = self.current_edited_game.get("source", "local")
         try:
@@ -55,7 +62,6 @@ class GameEditDialog(QDialog):
             self.source_combo.addItem(current_source.capitalize(), current_source)
         form_layout.addRow("Plataforma:", self.source_combo)
 
-        # --- Gerenciamento de Executáveis ---
         paths_group_box = QGroupBox("Executáveis")
         self.paths_edit_layout = QVBoxLayout(paths_group_box)
         self._refresh_edit_paths_labels()
@@ -71,7 +77,6 @@ class GameEditDialog(QDialog):
         paths_button_layout.addWidget(btn_remove_path)
         form_layout.addRow(paths_button_layout)
 
-        # --- Gerenciamento de Imagens ---
         self.img_btn = QPushButton("Alterar Pôster (Vertical)")
         self.img_btn.clicked.connect(self._edit_change_image)
         self.bg_btn = QPushButton("Alterar Fundo/Header (Horizontal)")
@@ -82,7 +87,6 @@ class GameEditDialog(QDialog):
         images_button_layout.addWidget(self.bg_btn)
         form_layout.addRow(images_button_layout)
 
-        # --- Ações Online e Finais ---
         btn_search_online = QPushButton("🔎 Buscar e Preencher com IGDB")
         btn_search_online.clicked.connect(lambda: self._search_online_data(self.name_input))
         
@@ -111,7 +115,8 @@ class GameEditDialog(QDialog):
         tags_text = self.tags_input.text().strip()
         self.current_edited_game["tags"] = [tag.strip() for tag in tags_text.split(',') if tag.strip()]
         
-        self.game_manager.update_game(self.game, self.current_edited_game)
+        # Passa os dados originais e os novos para a função de atualização
+        self.game_manager.update_game(self.original_game_data, self.current_edited_game)
         self.accept()
 
     def _search_online_data(self, name_input_widget):
@@ -131,12 +136,9 @@ class GameEditDialog(QDialog):
             selected_game = results_dialog.get_selected_game()
             
             if selected_game:
-                # Flag para controlar se algo foi realmente alterado
                 data_was_changed = False
-
-                # Lógica para as artes
                 should_download_art = True
-                if self.current_edited_game.get("image") or self.current_edited_game.get("background"):
+                if self.current_edited_game.get("image_path") or self.current_edited_game.get("background_path"):
                     reply = self.main_window_ref.show_message_box(
                         "Confirmar Substituição",
                         "Este jogo já possui artes locais. Deseja substituí-las com as artes do IGDB?",
@@ -149,17 +151,14 @@ class GameEditDialog(QDialog):
                 if should_download_art:
                     local_paths = download_and_save_images(selected_game)
                     if local_paths:
-                        # Se baixou algo, marca que houve alteração
                         data_was_changed = True
                         self.current_edited_game.update(local_paths)
 
-                # Atualiza os outros campos de texto e marca que houve alteração
                 self.name_input.setText(selected_game.get("name", self.current_edited_game.get("name")))
                 self.tags_input.setText(", ".join(selected_game.get("genres", [])))
                 self.current_edited_game.update(selected_game)
                 data_was_changed = True
 
-                # A mensagem de sucesso só é exibida se a flag for verdadeira
                 if data_was_changed:
                     self.main_window_ref.show_message_box("Sucesso", "Dados preenchidos! Clique em 'Salvar Alterações' para confirmar.", "info")
 
@@ -196,12 +195,12 @@ class GameEditDialog(QDialog):
     def _edit_change_image(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Selecionar Pôster", "", "Imagens (*.png *.jpg *.jpeg)")
         if file_path:
-            self.current_edited_game["image"] = file_path
+            self.current_edited_game["image_path"] = file_path
             self.img_btn.setText(f"Pôster: {os.path.basename(file_path)}")
 
     def _edit_change_background(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Selecionar Fundo", "", "Imagens (*.png *.jpg *.jpeg)")
         if file_path:
-            self.current_edited_game["background"] = file_path
-            self.current_edited_game["header"] = file_path
+            self.current_edited_game["background_path"] = file_path
+            self.current_edited_game["header_path"] = file_path
             self.bg_btn.setText(f"Fundo: {os.path.basename(file_path)}")

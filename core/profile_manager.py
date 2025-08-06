@@ -66,3 +66,13 @@ class ProfileManager:
         conn.commit()
         conn.close()
         logging.info("Dados do perfil salvos no banco de dados.")
+
+    def update_steam_credentials(self, api_key, steam_id):
+        """Salva a chave de API e o SteamID no banco de dados."""
+        conn = get_db_connection()
+        conn.execute(
+            "UPDATE profile SET steam_api_key = ?, steam_id_64 = ? WHERE id = 1",
+            (api_key, steam_id)
+        )
+        conn.commit()
+        conn.close()

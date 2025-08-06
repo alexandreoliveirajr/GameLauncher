@@ -1,7 +1,7 @@
 # gui/animated_card.py
 
 import os
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QGraphicsDropShadowEffect
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QGraphicsDropShadowEffect, QGraphicsColorizeEffect
 from PyQt6.QtGui import QPixmap, QColor, QPainter
 from PyQt6.QtCore import QPropertyAnimation, QRect, QEasingCurve, Qt, pyqtSignal, QSize, QRectF, QPoint
 
@@ -77,11 +77,7 @@ class AnimatedGameCard(QFrame):
             self.platform_icon_label.setScaledContents(True)
 
     def _load_and_scale_pixmap(self):
-        # --- INÍCIO DA CORREÇÃO ---
-        # Trocado "image" por "image_path" para corresponder aos dados do GameManager
         image_path = self.game.get("image_path")
-        # --- FIM DA CORREÇÃO ---
-        
         target_size = self.image_label.size()
 
         if target_size.width() == 0 or target_size.height() == 0: return
@@ -91,23 +87,42 @@ class AnimatedGameCard(QFrame):
             painter = QPainter(placeholder); painter.setPen(QColor("#FFFFFF"))
             font = self.font(); font.setPointSize(12); painter.setFont(font)
             painter.drawText(placeholder.rect(), int(Qt.AlignmentFlag.AlignCenter | Qt.TextFlag.TextWordWrap), self.game["name"])
-            painter.end(); self.image_label.setPixmap(placeholder); return
-
-        source_pixmap = QPixmap(image_path)
-        is_vertical = source_pixmap.height() > source_pixmap.width()
-        
-        if is_vertical:
-            scaled_pixmap = source_pixmap.scaled(target_size, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation)
+            painter.end(); self.image_label.setPixmap(placeholder)
         else:
-            canvas = QPixmap(target_size); canvas.fill(QColor("#333"))
-            scaled_art = source_pixmap.scaled(target_size, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-            painter = QPainter(canvas)
-            x = (target_size.width() - scaled_art.width()) / 2
-            y = (target_size.height() - scaled_art.height()) / 2
-            painter.drawPixmap(int(x), int(y), scaled_art); painter.end()
-            scaled_pixmap = canvas
+            source_pixmap = QPixmap(image_path)
+            is_vertical = source_pixmap.height() > source_pixmap.width()
+            
+            if is_vertical:
+                scaled_pixmap = source_pixmap.scaled(target_size, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation)
+            else:
+                canvas = QPixmap(target_size); canvas.fill(QColor("#333"))
+                scaled_art = source_pixmap.scaled(target_size, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                painter = QPainter(canvas)
+                x = (target_size.width() - scaled_art.width()) / 2
+                y = (target_size.height() - scaled_art.height()) / 2
+                painter.drawPixmap(int(x), int(y), scaled_art); painter.end()
+                scaled_pixmap = canvas
 
-        self.image_label.setPixmap(scaled_pixmap)
+            self.image_label.setPixmap(scaled_pixmap)
+        
+        # --- INÍCIO DA ADIÇÃO ---
+        # Após carregar a imagem, aplica o efeito visual com base no status do jogo
+        self._apply_status_effect()
+        # --- FIM DA ADIÇÃO ---
+
+    def _apply_status_effect(self):
+        """Aplica um efeito de escala de cinza se o jogo não estiver instalado."""
+        is_installed = self.game.get("status", "UNINSTALLED") == "INSTALLED"
+        
+        if not is_installed:
+            effect = QGraphicsColorizeEffect()
+            # Define a cor para um cinza médio com alguma transparência para dessaturar a imagem
+            effect.setColor(QColor(128, 128, 128))
+            effect.setStrength(0.8) # Força do efeito, 1.0 é totalmente cinza
+            self.image_label.setGraphicsEffect(effect)
+        else:
+            # Garante que jogos instalados não tenham nenhum efeito
+            self.image_label.setGraphicsEffect(None)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
