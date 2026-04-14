@@ -16,4 +16,4 @@ Rastreamento de Atividade: O launcher monitora seu tempo de jogo para todos os e
 
 -----------------------------------------------------------------------------------------------------------------
 
-*** PROJETO ABANDONADO COM DESENVOLVIMENTO CONTINUADO DO ZERO NO REPOSITÓRIO GAME LAUNCHER 2.0. ***
+*** PROJETO ABANDONADO COM DESENVOLVIMENTO FEITO DO ZERO NO REPOSITÓRIO GAME LAUNCHER 2.0. ***
